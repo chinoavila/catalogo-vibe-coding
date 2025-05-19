@@ -49,8 +49,14 @@ async function loadSiteConfig() {
         if (docSnap.exists()) {
             const config = docSnap.data();
             const siteName = config.siteName || '[Nombre del sitio]';
+            
+            // Actualizar todas las instancias del nombre del sitio
+            document.title = `${siteName} | Catálogo de Productos`;
             document.querySelector('.navbar-brand').textContent = siteName;
             document.querySelector('#catalogo h2').textContent = `Catálogo ${siteName}`;
+            document.querySelector('footer div').textContent = `© 2025 ${siteName} desarrollado por Alejandro Javier Avila. Todos los derechos reservados.`;
+            
+            // Resto de la configuración
             document.getElementById('header-image').src = config.coverImage || '[URL imagen de portada]';
             document.getElementById('slogan1').textContent = config.slogan1 || '[Slogan principal]';
             document.getElementById('slogan2').textContent = config.slogan2 || '[Slogan secundario]';
@@ -64,10 +70,16 @@ async function loadSiteConfig() {
             // Agregar evento para actualizar el formulario cuando se abre el modal
             document.getElementById('btn-edit-site').addEventListener('click', updateForm);
         } else {
-            // Si no existe configuración, mostrar placeholders            
+            // Si no existe configuración, mostrar placeholders
             const siteName = '[Nombre del sitio]';
+            
+            // Actualizar todas las instancias del nombre del sitio
+            document.title = `${siteName} | Catálogo de Productos`;
             document.querySelector('.navbar-brand').textContent = siteName;
             document.querySelector('#catalogo h2').textContent = `Catálogo ${siteName}`;
+            document.querySelector('footer div').textContent = `© 2025 Sitio oficial de ${siteName}, desarrollado por Alejandro Javier Avila. Todos los derechos reservados.`;
+            
+            // Resto de placeholders
             document.getElementById('header-image').src = '[URL imagen de portada]';
             document.getElementById('slogan1').textContent = '[Slogan principal]';
             document.getElementById('slogan2').textContent = '[Slogan secundario]';
@@ -455,7 +467,7 @@ function showImageSlider(product) {
     let currentIndex = products.findIndex(p => p._id === product._id);
     function updateSliderContent(newProduct, newIndex) {
         modalTitle.textContent = 'Vista del Producto';
-        sliderImage.src = newProduct.image || 'https://via.placeholder.com/800x600?text=Sin+Imagen';
+        sliderImage.src = newProduct.image || '';
         sliderImage.alt = newProduct.description;
         productTitle.textContent = 'Detalles del Producto';
         productPrice.textContent = `$${newProduct.price}`;
