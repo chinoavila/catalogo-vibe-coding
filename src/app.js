@@ -1,17 +1,124 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc } from "firebase/firestore";
+import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc, getDoc, setDoc } from "firebase/firestore";
 
 // Configuración de Firebase usando variables de entorno Vite
-const firebaseConfig = {  apiKey: import.meta.env.VITE_API_KEY,
-  authDomain: import.meta.env.VITE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_PROJECT_ID,
-  messagingSenderId: import.meta.env.VITE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_APP_ID,
-  measurementId: import.meta.env.VITE_MEASUREMENT_ID
+const firebaseConfig = {
+    apiKey: import.meta.env.VITE_API_KEY,
+    authDomain: import.meta.env.VITE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_PROJECT_ID,
+    messagingSenderId: import.meta.env.VITE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_APP_ID,
+    measurementId: import.meta.env.VITE_MEASUREMENT_ID
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+
+// Referencia a la colección de configuración
+const siteConfigRef = doc(db, 'config', 'site');
+
+// Función para actualizar el formulario con los valores actuales            
+function updateForm() {
+    // Capturar los valores actuales o usar placeholders
+    const currentSiteName = document.querySelector('.navbar-brand').textContent;
+    const currentSlogan1 = document.getElementById('slogan1').textContent;
+    const currentSlogan2 = document.getElementById('slogan2').textContent;
+    const currentAboutText = document.getElementById('about-content').textContent;
+    const currentContactText = document.getElementById('contact-content').textContent;
+    const currentSchedule = document.getElementById('schedule-text').textContent;
+    const currentShippingInfo = document.getElementById('shipping-text').textContent;
+    const currentInstagramUrl = document.getElementById('instagram-link').href;
+    const currentInstagramHandle = document.getElementById('instagram-handle').textContent;
+
+    // Actualizar los campos del formulario
+    document.getElementById('site-name').value = currentSiteName === '[Nombre del sitio]' ? '' : currentSiteName;
+    document.getElementById('slogan1-text').value = currentSlogan1 === '[Slogan principal]' ? '' : currentSlogan1;
+    document.getElementById('slogan2-text').value = currentSlogan2 === '[Slogan secundario]' ? '' : currentSlogan2;
+    document.getElementById('about-text').value = currentAboutText === '[Texto Quiénes somos]' ? '' : currentAboutText;
+    document.getElementById('contact-text').value = currentContactText === '[Texto de Contacto]' ? '' : currentContactText;
+    document.getElementById('schedule').value = currentSchedule === '[Horario de atención]' ? '' : currentSchedule;
+    document.getElementById('shipping-info').value = currentShippingInfo === '[Información de envíos]' ? '' : currentShippingInfo;
+    document.getElementById('instagram-url').value = currentInstagramUrl === '#' ? '' : currentInstagramUrl;
+    document.getElementById('instagram-handle-text').value = currentInstagramHandle === '[Usuario de Instagram]' ? '' : currentInstagramHandle;
+}
+
+// Función para cargar la configuración del sitio
+async function loadSiteConfig() {
+    try {
+        const docSnap = await getDoc(siteConfigRef);
+        if (docSnap.exists()) {
+            const config = docSnap.data();
+            const siteName = config.siteName || '[Nombre del sitio]';
+            document.querySelector('.navbar-brand').textContent = siteName;
+            document.querySelector('#catalogo h2').textContent = `Catálogo ${siteName}`;
+            document.getElementById('header-image').src = config.coverImage || '[URL imagen de portada]';
+            document.getElementById('slogan1').textContent = config.slogan1 || '[Slogan principal]';
+            document.getElementById('slogan2').textContent = config.slogan2 || '[Slogan secundario]';
+            document.getElementById('about-content').textContent = config.aboutText || '[Texto Quiénes somos]';
+            document.getElementById('contact-content').textContent = config.contactText || '[Texto de Contacto]';
+            document.getElementById('schedule-text').textContent = config.schedule || '[Horario de atención]';
+            document.getElementById('shipping-text').textContent = config.shippingInfo || '[Información de envíos]';
+            document.getElementById('instagram-link').href = config.instagramUrl || '#';
+            document.getElementById('instagram-handle').textContent = config.instagramHandle || '[Usuario de Instagram]';
+
+            // Agregar evento para actualizar el formulario cuando se abre el modal
+            document.getElementById('btn-edit-site').addEventListener('click', updateForm);
+        } else {
+            // Si no existe configuración, mostrar placeholders            
+            const siteName = '[Nombre del sitio]';
+            document.querySelector('.navbar-brand').textContent = siteName;
+            document.querySelector('#catalogo h2').textContent = `Catálogo ${siteName}`;
+            document.getElementById('header-image').src = '[URL imagen de portada]';
+            document.getElementById('slogan1').textContent = '[Slogan principal]';
+            document.getElementById('slogan2').textContent = '[Slogan secundario]';
+            document.getElementById('about-content').textContent = '[Texto Quiénes somos]';
+            document.getElementById('contact-content').textContent = '[Texto de Contacto]';
+            document.getElementById('schedule-text').textContent = '[Horario de atención]';
+            document.getElementById('shipping-text').textContent = '[Información de envíos]';
+            document.getElementById('instagram-link').href = '#';
+            document.getElementById('instagram-handle').textContent = '[Usuario de Instagram]';
+        }
+    } catch (error) {
+        console.error('Error al cargar la configuración:', error);
+    }
+}
+
+// Función para guardar la configuración del sitio
+async function saveSiteConfig(event) {
+    event.preventDefault();
+    if (!adminModule.isAdmin()) return alert('Acceso restringido.');
+
+    try {
+        const imageFile = document.getElementById('cover-image').files[0];
+        let coverImage = null;
+
+        if (imageFile) {
+            coverImage = await saveImage(imageFile);
+        } const config = {
+            siteName: document.getElementById('site-name').value,
+            slogan1: document.getElementById('slogan1-text').value,
+            slogan2: document.getElementById('slogan2-text').value,
+            aboutText: document.getElementById('about-text').value,
+            contactText: document.getElementById('contact-text').value,
+            schedule: document.getElementById('schedule').value,
+            shippingInfo: document.getElementById('shipping-info').value,
+            instagramUrl: document.getElementById('instagram-url').value,
+            instagramHandle: document.getElementById('instagram-handle-text').value
+        };
+
+        if (coverImage) {
+            config.coverImage = coverImage;
+        }
+
+        await setDoc(siteConfigRef, config);
+        const modal = bootstrap.Modal.getInstance(document.getElementById('modalSiteConfig'));
+        modal.hide();
+        alert('Configuración guardada correctamente');
+    } catch (error) {
+        console.error('Error al guardar la configuración:', error);
+        alert('Error al guardar la configuración. Por favor intenta nuevamente.');
+    }
+}
 
 let products = [];
 const PRODUCTS_PER_PAGE = 6; // Número de productos por página
@@ -22,14 +129,14 @@ async function saveImage(imageFile) {
     try {
         const formData = new FormData();
         formData.append('image', imageFile);
-        
+
         try {
             // Enviar la imagen al servidor Express para guardarla
             const response = await fetch('/upload', {
                 method: 'POST',
                 body: formData
             });
-            
+
             if (!response.ok) {
                 throw new Error('Error al subir la imagen');
             }
@@ -51,10 +158,15 @@ async function saveImage(imageFile) {
 const adminModule = (() => {
     // Obtener credenciales del administrador desde variables de entorno
     const ADMIN_PASS = import.meta.env.VITE_ADMIN_PASS;
-    let isAdmin = false;function login(pass) {
+    let isAdmin = localStorage.getItem('isAdmin') === 'true';    
+    function login(pass) {
         if (pass === ADMIN_PASS) {
             isAdmin = true;
-            document.getElementById('product-form').style.display = '';
+            localStorage.setItem('isAdmin', 'true');
+            document.getElementById('btn-add-product').classList.remove('d-none');
+            document.getElementById('btn-edit-site').classList.remove('d-none');
+            document.getElementById('logout-container').style.display = 'block';
+            document.getElementById('btn-admin').style.display = 'none';
             renderProducts(); // Re-renderizar productos para mostrar botones de edición
             return true;
         } else {
@@ -62,11 +174,21 @@ const adminModule = (() => {
             return false;
         }
     }
+    function logout() {
+        isAdmin = false;
+        localStorage.removeItem('isAdmin');
+        document.getElementById('btn-add-product').classList.add('d-none');
+        document.getElementById('btn-edit-site').classList.add('d-none');
+        document.getElementById('btn-admin').style.display = '';
+        renderProducts();
+    }
 
     async function addProduct(productosCol, data) {
         if (!isAdmin) return alert('Acceso restringido.');
         await addDoc(productosCol, data);
-    }    async function deleteProduct(productosCol, id) {
+    }
+
+    async function deleteProduct(productosCol, id) {
         if (!isAdmin) return alert('Acceso restringido.');
         await deleteDoc(doc(productosCol, id));
     }
@@ -75,15 +197,36 @@ const adminModule = (() => {
         return isAdmin;
     }
 
-    return { login, addProduct, deleteProduct, isAdmin: isAdminCheck };
+    return { login, logout, addProduct, deleteProduct, isAdmin: isAdminCheck };
 })();
 // --- Fin módulo administración ---
 
 // Escuchar cambios en Firestore y actualizar la galería
 document.addEventListener('DOMContentLoaded', async () => {
+    // Cargar la configuración del sitio
+    await loadSiteConfig();
+
+    // Verificar si hay una sesión de administrador activa
+    if (localStorage.getItem('isAdmin') === 'true') {
+        document.getElementById('btn-add-product').classList.remove('d-none');
+        document.getElementById('btn-edit-site').classList.remove('d-none');
+        document.getElementById('logout-container').style.display = 'block';
+        document.getElementById('btn-admin').style.display = 'none';
+    }
+
+    // Event listener para el formulario de configuración
+    document.getElementById('site-config-form').addEventListener('submit', saveSiteConfig);
+
+    // Manejar el evento de cierre de sesión
+    document.getElementById('btn-logout').addEventListener('click', (e) => {
+        e.preventDefault();
+        adminModule.logout();
+        document.getElementById('logout-container').style.display = 'none';
+    });
+
     // Botón Volver Arriba
     const btnScrollTop = document.getElementById('btn-scroll-top');
-    
+
     // Mostrar/ocultar botón según el scroll
     window.addEventListener('scroll', () => {
         if (window.scrollY > 300) {
@@ -146,11 +289,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    document.getElementById('admin-login-form').addEventListener('submit', function(e) {
+    document.getElementById('admin-login-form').addEventListener('submit', function (e) {
         e.preventDefault();
         const pass = document.getElementById('admin-pass').value;
-        if (adminModule.login(pass)) {            if (adminModal) adminModal.hide();
-            document.getElementById('product-form').style.display = '';
+        if (adminModule.login(pass)) {
+            if (adminModal) adminModal.hide();
             setTimeout(() => {
                 document.getElementById('btn-add-product').classList.remove('d-none');
             }, 100);
@@ -159,54 +302,59 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // Ocultar formulario y botones de eliminar por defecto
-    document.getElementById('product-form').style.display = 'none';
-
     // Eliminar el login simple anterior (admin-login div)
     const oldLoginDiv = document.getElementById('admin-login');
-    if (oldLoginDiv) oldLoginDiv.innerHTML = '';    
-    document.getElementById('btn-add-product').addEventListener('click', () => {
+    if (oldLoginDiv) oldLoginDiv.innerHTML = '';    document.getElementById('btn-add-product').addEventListener('click', () => {
         document.getElementById('modalProductLabel').textContent = 'Agregar Producto';
         document.getElementById('product-id').value = '';
         document.getElementById('description').value = '';
         document.getElementById('price').value = '';
         document.getElementById('image').value = '';
-    });    
-    document.getElementById('product-form').addEventListener('submit', async function(e) {
+        document.getElementById('current-image').style.display = 'none';
+    });document.getElementById('product-form').addEventListener('submit', async function (e) {
         e.preventDefault();
         const id = document.getElementById('product-id').value;
         const description = document.getElementById('description').value.trim();
         const price = parseFloat(document.getElementById('price').value);
         const imageFile = document.getElementById('image').files[0];
+
+        // Validar campos requeridos
+        if (!description || isNaN(price)) {
+            return alert('Por favor completa la descripción y el precio');
+        }
         
-        if (!description || isNaN(price) || (!id && !imageFile)) {
-            return alert('Por favor completa todos los campos');
+        // Al agregar un nuevo producto, la imagen es requerida
+        if (!id && !imageFile) {
+            return alert('Por favor selecciona una imagen para el nuevo producto');
         }
 
         try {
-            let imagePath = null;
-            
-            // Si hay una imagen nueva, guardarla localmente
-            if (imageFile) {
-                imagePath = await saveImage(imageFile);
-            }
-
             const productosCol = collection(db, 'productos');
-            const productData = { 
-                description, 
+            const productData = {
+                description,
                 price: price.toFixed(2)
             };
 
-            if (imagePath) {
-                productData.image = imagePath;
+            // Si hay una imagen nueva, procesarla
+            if (imageFile) {
+                const imagePath = await saveImage(imageFile);
+                if (imagePath) {
+                    productData.image = imagePath;
+                }
             }
 
             if (id) {
                 // Editar producto
                 if (!adminModule.isAdmin()) return alert('Acceso restringido.');
-                  // Si hay imagen nueva y existe una imagen anterior, la imagen antigua se mantendrá en el servidor
-                const oldProduct = products.find(p => p._id === id);
                 
+                // Si no hay imagen nueva, mantener la imagen existente
+                if (!imageFile) {
+                    const currentProduct = products.find(p => p._id === id);
+                    if (currentProduct && currentProduct.image) {
+                        productData.image = currentProduct.image;
+                    }
+                }
+
                 await window.updateProduct(productosCol, id, productData);
             } else {
                 // Agregar producto
@@ -215,6 +363,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // Cerrar el modal y limpiar el formulario
             const modal = bootstrap.Modal.getInstance(document.getElementById('modalProduct'));
+            document.getElementById('current-image').style.display = 'none';
             if (modal) modal.hide();
             this.reset();
         } catch (error) {
@@ -237,12 +386,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.querySelector('.container').classList.remove('sidebar-open');
         });
     });
+
+    // Cargar configuración del sitio
+    loadSiteConfig();
 });
 
 function renderProducts() {
     const list = document.getElementById('product-list');
     list.innerHTML = '';
-    
+
     if (products.length === 0) {
         list.innerHTML = '<p class="text-center text-secondary">No hay productos en el catálogo.</p>';
         return;
@@ -253,14 +405,14 @@ function renderProducts() {
     const endIndex = startIndex + PRODUCTS_PER_PAGE;
     const totalPages = Math.ceil(products.length / PRODUCTS_PER_PAGE);
     const paginatedProducts = products.slice(startIndex, endIndex);
-    
+
     const isAdmin = adminModule.isAdmin && adminModule.isAdmin();
-    
+
     // Renderizar productos
     paginatedProducts.forEach((product) => {
         const col = document.createElement('div');
-        col.className = 'col-12 col-md-6 col-lg-4';        let imageUrl = product.image || 'https://via.placeholder.com/300x180?text=Sin+Imagen';
-        
+        col.className = 'col-12 col-md-6 col-lg-4';
+        let imageUrl = product.image || 'https://via.placeholder.com/300x180?text=Sin+Imagen';
         col.innerHTML = `        <div class="card product-card h-100 d-flex flex-column justify-content-between">
             <img src="${imageUrl}" class="card-img-top" alt="${product.description}">
             <div class="card-body">
@@ -284,7 +436,7 @@ function renderProducts() {
                 <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
                     <button class="page-link" onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>Anterior</button>
                 </li>
-                ${Array.from({length: totalPages}, (_, i) => i + 1).map(page => `
+                ${Array.from({ length: totalPages }, (_, i) => i + 1).map(page => `
                     <li class="page-item ${currentPage === page ? 'active' : ''}">
                         <button class="page-link" onclick="changePage(${page})">${page}</button>
                     </li>
@@ -299,7 +451,7 @@ function renderProducts() {
 }
 
 // Función para cambiar de página
-window.changePage = function(newPage) {
+window.changePage = function (newPage) {
     if (newPage >= 1 && newPage <= Math.ceil(products.length / PRODUCTS_PER_PAGE)) {
         currentPage = newPage;
         renderProducts();
@@ -307,7 +459,7 @@ window.changePage = function(newPage) {
 }
 
 // Modal para agregar/editar producto
-window.editProduct = function(id) {
+window.editProduct = function (id) {
     const product = products.find(p => p._id === id);
     if (!product) return;
     document.getElementById('modalProductLabel').textContent = 'Editar Producto';
@@ -315,17 +467,27 @@ window.editProduct = function(id) {
     document.getElementById('description').value = product.description;
     document.getElementById('price').value = product.price;
     document.getElementById('image').value = ''; // Limpiar el input de archivo
+    
+    // Mostrar la imagen actual
+    const currentImage = document.getElementById('current-image');
+    if (product.image) {
+        currentImage.src = product.image;
+        currentImage.style.display = 'block';
+    } else {
+        currentImage.style.display = 'none';
+    }
+    
     const modal = new bootstrap.Modal(document.getElementById('modalProduct'));
     modal.show();
 }
 
-window.updateProduct = async function(productosCol, id, data) {
+window.updateProduct = async function (productosCol, id, data) {
     if (!adminModule.isAdmin()) return alert('Acceso restringido.');
     const ref = doc(productosCol, id);
     await updateDoc(ref, data);
 }
 
-window.deleteProduct = async function(id) {
+window.deleteProduct = async function (id) {
     const productosCol = collection(db, 'productos');
     await adminModule.deleteProduct(productosCol, id);
 }
