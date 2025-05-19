@@ -49,13 +49,13 @@ async function loadSiteConfig() {
         if (docSnap.exists()) {
             const config = docSnap.data();
             const siteName = config.siteName || '[Nombre del sitio]';
-            
+
             // Actualizar todas las instancias del nombre del sitio
             document.title = `${siteName} | Catálogo de Productos`;
             document.querySelector('.navbar-brand').textContent = siteName;
             document.querySelector('#catalogo h2').textContent = `Catálogo ${siteName}`;
-            document.querySelector('footer div').textContent = `© 2025 ${siteName} desarrollado por Alejandro Javier Avila. Todos los derechos reservados.`;
-            
+            document.querySelector('footer div').textContent = `© Sitio oficial de ${siteName}, desarrollado por Alejandro Javier Avila. Todos los derechos reservados.`;
+
             // Resto de la configuración
             document.getElementById('header-image').src = config.coverImage || '[URL imagen de portada]';
             document.getElementById('slogan1').textContent = config.slogan1 || '[Slogan principal]';
@@ -72,13 +72,13 @@ async function loadSiteConfig() {
         } else {
             // Si no existe configuración, mostrar placeholders
             const siteName = '[Nombre del sitio]';
-            
+
             // Actualizar todas las instancias del nombre del sitio
             document.title = `${siteName} | Catálogo de Productos`;
             document.querySelector('.navbar-brand').textContent = siteName;
             document.querySelector('#catalogo h2').textContent = `Catálogo ${siteName}`;
             document.querySelector('footer div').textContent = `© 2025 Sitio oficial de ${siteName}, desarrollado por Alejandro Javier Avila. Todos los derechos reservados.`;
-            
+
             // Resto de placeholders
             document.getElementById('header-image').src = '[URL imagen de portada]';
             document.getElementById('slogan1').textContent = '[Slogan principal]';
@@ -99,11 +99,11 @@ async function loadSiteConfig() {
 function showToast(message, type = 'info') {
     const toastContainer = document.querySelector('.toast-container');
     const toastId = `toast-${Date.now()}`;
-    
+
     const toastEl = document.createElement('div');
     toastEl.className = `toast ${type === 'error' ? 'bg-danger' : type === 'success' ? 'bg-success' : ''}`;
     toastEl.id = toastId;
-    
+
     toastEl.innerHTML = `
         <div class="toast-header">
             <strong class="me-auto">${type === 'error' ? 'Error' : type === 'success' ? 'Éxito' : 'Información'}</strong>
@@ -111,16 +111,16 @@ function showToast(message, type = 'info') {
         </div>
         <div class="toast-body">${message}</div>
     `;
-    
+
     toastContainer.appendChild(toastEl);
-    
+
     const toast = new bootstrap.Toast(toastEl, {
         autohide: true,
         delay: 3000
     });
-    
+
     toast.show();
-    
+
     // Eliminar el toast del DOM cuando se oculte
     toastEl.addEventListener('hidden.bs.toast', () => {
         toastEl.remove();
@@ -133,15 +133,9 @@ async function saveSiteConfig(event) {
     if (!adminModule.isAdmin()) {
         showToast('Acceso restringido.', 'error');
         return;
-    }
-
-    try {
+    } try {
         const imageFile = document.getElementById('cover-image').files[0];
-        let coverImage = null;
-
-        if (imageFile) {
-            coverImage = await saveImage(imageFile);
-        } const config = {
+        const config = {
             siteName: document.getElementById('site-name').value,
             slogan1: document.getElementById('slogan1-text').value,
             slogan2: document.getElementById('slogan2-text').value,
@@ -153,13 +147,24 @@ async function saveSiteConfig(event) {
             instagramHandle: document.getElementById('instagram-handle-text').value
         };
 
-        if (coverImage) {
-            config.coverImage = coverImage;
-        }
-
-        await setDoc(siteConfigRef, config);
+        if (imageFile) {
+            // Si se seleccionó una nueva imagen, procesarla y actualizar
+            const coverImage = await saveImage(imageFile);
+            if (coverImage) {
+                config.coverImage = coverImage;
+            }
+        } else {
+            // Si no hay nueva imagen, recuperar la imagen actual del header
+            const currentImage = document.getElementById('header-image').src;
+            if (currentImage && !currentImage.includes('[URL imagen de portada]')) {
+                config.coverImage = currentImage;
+            }
+        }        await setDoc(siteConfigRef, config);
         const modal = bootstrap.Modal.getInstance(document.getElementById('modalSiteConfig'));
         modal.hide();
+        
+        // Recargar la configuración del sitio inmediatamente
+        await loadSiteConfig();
         showToast('Configuración guardada correctamente', 'success');
     } catch (error) {
         console.error('Error al guardar la configuración:', error);
@@ -205,7 +210,7 @@ async function saveImage(imageFile) {
 const adminModule = (() => {
     // Obtener credenciales del administrador desde variables de entorno
     const ADMIN_PASS = import.meta.env.VITE_ADMIN_PASS;
-    let isAdmin = localStorage.getItem('isAdmin') === 'true';    
+    let isAdmin = localStorage.getItem('isAdmin') === 'true';
     function login(pass) {
         if (pass === ADMIN_PASS) {
             isAdmin = true;
@@ -358,14 +363,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Eliminar el login simple anterior (admin-login div)
     const oldLoginDiv = document.getElementById('admin-login');
-    if (oldLoginDiv) oldLoginDiv.innerHTML = '';    document.getElementById('btn-add-product').addEventListener('click', () => {
+    if (oldLoginDiv) oldLoginDiv.innerHTML = ''; document.getElementById('btn-add-product').addEventListener('click', () => {
         document.getElementById('modalProductLabel').textContent = 'Agregar Producto';
         document.getElementById('product-id').value = '';
         document.getElementById('description').value = '';
         document.getElementById('price').value = '';
         document.getElementById('image').value = '';
         document.getElementById('current-image').style.display = 'none';
-    });document.getElementById('product-form').addEventListener('submit', async function (e) {
+    }); document.getElementById('product-form').addEventListener('submit', async function (e) {
         e.preventDefault();
         const id = document.getElementById('product-id').value;
         const description = document.getElementById('description').value.trim();
@@ -377,7 +382,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             showToast('Por favor completa la descripción y el precio', 'error');
             return;
         }
-        
+
         // Al agregar un nuevo producto, la imagen es requerida
         if (!id && !imageFile) {
             showToast('Por favor selecciona una imagen para el nuevo producto', 'error');
@@ -405,7 +410,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     showToast('Acceso restringido.', 'error');
                     return;
                 }
-                
+
                 // Si no hay imagen nueva, mantener la imagen existente
                 if (!imageFile) {
                     const currentProduct = products.find(p => p._id === id);
@@ -462,7 +467,7 @@ function showImageSlider(product) {
     const productDescription = document.querySelector('#modalImageSlider .product-description');
     const prevBtn = document.getElementById('prevProduct');
     const nextBtn = document.getElementById('nextProduct');
-    
+
     // Encuentra el índice del producto actual
     let currentIndex = products.findIndex(p => p._id === product._id);
     function updateSliderContent(newProduct, newIndex) {
@@ -472,29 +477,29 @@ function showImageSlider(product) {
         productTitle.textContent = 'Detalles del Producto';
         productPrice.textContent = `$${newProduct.price}`;
         productDescription.textContent = newProduct.description;
-        
+
         // Actualizar estado de los botones de navegación
         prevBtn.disabled = newIndex <= 0;
         nextBtn.disabled = newIndex >= products.length - 1;
-        
+
         // Actualizar el índice actual
         currentIndex = newIndex;
     }
-      // Configurar navegación
+    // Configurar navegación
     prevBtn.onclick = () => {
         if (currentIndex > 0) {
             updateSliderContent(products[currentIndex - 1], currentIndex - 1);
             resetZoom();
         }
     };
-    
+
     nextBtn.onclick = () => {
         if (currentIndex < products.length - 1) {
             updateSliderContent(products[currentIndex + 1], currentIndex + 1);
             resetZoom();
         }
     };
-    
+
     // También permitir navegación con teclado
     const handleKeydown = (e) => {
         if (e.key === 'ArrowLeft' && currentIndex > 0) {
@@ -503,14 +508,14 @@ function showImageSlider(product) {
             nextBtn.click();
         }
     };
-    
+
     document.addEventListener('keydown', handleKeydown);
-    
+
     // Limpiar event listener al cerrar el modal
     document.getElementById('modalImageSlider').addEventListener('hidden.bs.modal', () => {
         document.removeEventListener('keydown', handleKeydown);
     });
-    
+
     updateSliderContent(product, currentIndex);
 
     function resetZoom() {
@@ -521,7 +526,7 @@ function showImageSlider(product) {
 
     // Manejar zoom de imagen
     let isZoomed = false;
-    sliderImage.addEventListener('click', function() {
+    sliderImage.addEventListener('click', function () {
         if (!isZoomed) {
             this.style.transform = 'scale(1.5)';
             this.classList.add('zoomed');
@@ -621,7 +626,7 @@ window.editProduct = function (id) {
     document.getElementById('description').value = product.description;
     document.getElementById('price').value = product.price;
     document.getElementById('image').value = ''; // Limpiar el input de archivo
-    
+
     // Mostrar la imagen actual
     const currentImage = document.getElementById('current-image');
     if (product.image) {
@@ -630,7 +635,7 @@ window.editProduct = function (id) {
     } else {
         currentImage.style.display = 'none';
     }
-    
+
     const modal = new bootstrap.Modal(document.getElementById('modalProduct'));
     modal.show();
 }
