@@ -6,9 +6,10 @@ services:
     working_dir: /app
     volumes:
       - ./:/app
+      - vite_node_modules:/app/node_modules
     ports:
       - "5173:5173"
-    command: sh -c "npm run dev -- --host"    
+    command: sh -c "npm install && npm run dev -- --host"    
     environment:
       - NODE_ENV=development
       - VITE_API_KEY=${VITE_API_KEY}
@@ -16,7 +17,6 @@ services:
       - VITE_PROJECT_ID=${VITE_PROJECT_ID}
       - VITE_MESSAGING_SENDER_ID=${VITE_MESSAGING_SENDER_ID}
       - VITE_APP_ID=${VITE_APP_ID}
-      - VITE_ADMIN_PASS=${VITE_ADMIN_PASS}
     networks:
       - app-network
     depends_on:
@@ -27,14 +27,20 @@ services:
     container_name: express-upload
     working_dir: /app
     volumes:
-      - ./:/app
+      - ./server:/app
+      - express_node_modules:/app/node_modules
+      - ./src/images:/app/src/images
     ports:
       - "3000:3000"
-    command: sh -c "npm run server"
+    command: sh -c "npm install && npm start"
     environment:
       - PORT=3000
     networks:
       - app-network
+
+volumes:
+  vite_node_modules:
+  express_node_modules:
 
 networks:
   app-network:

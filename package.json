@@ -1,22 +1,17 @@
 {
-  "name": "catalogo-shameless",
+  "name": "catalogo-shameless-client",
   "version": "1.0.0",
   "scripts": {
     "dev": "vite",
-    "server": "node server.js",
-    "start": "concurrently \"npm run server\" \"npm run dev\"",
     "build": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
     "bootstrap": "^5.3.6",
-    "express": "^5.1.0",
-    "firebase": "^11.7.1",
-    "multer": "^1.4.5-lts.2"
+    "firebase": "^11.7.1"
   },
   "devDependencies": {
-    "concurrently": "^9.1.2",
     "vite": "^5.0.0"
   }
 }
