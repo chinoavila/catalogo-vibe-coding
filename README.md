@@ -105,13 +105,20 @@ cp docker-compose.example.yml docker-compose.yml
 ```
 Ajustar la configuración de Docker según sea necesario.
 
-4. Instalar dependencias:
-```bash
-npm install
+4. Preparar las carpetas para las imágenes:
+```powershell
+mkdir -p src/images
+mkdir -p server/src/images
 ```
 
-5. Iniciar la aplicación:
-```bash
+5. Instalar dependencias (opcional, Docker lo hará automáticamente):
+```powershell
+npm install  # Para el frontend
+cd server && npm install  # Para el servidor
+```
+
+6. Iniciar la aplicación:
+```powershell
 docker-compose up --build
 ```
 
@@ -124,13 +131,18 @@ La aplicación estará disponible en:
 ```
 .
 ├── src/
-│   ├── images/
-│   │   └── productos/    # Almacenamiento local de imágenes
-│   ├── app.js           # Lógica principal de la aplicación
-│   ├── main.js          # Punto de entrada
-│   └── styles.css       # Estilos
-├── server.js            # Servidor Express para imágenes
+│   ├── images/          # Almacenamiento de imágenes del frontend
+│   ├── app.js          # Lógica principal de la aplicación
+│   ├── main.js         # Punto de entrada
+│   └── styles.css      # Estilos
+├── server/
+│   ├── package.json    # Dependencias del servidor
+│   ├── server.js       # Servidor Express para imágenes
+│   └── src/
+│       └── images/     # Almacenamiento de imágenes subidas
 ├── docker-compose.yml   # Configuración de Docker
+├── docker-compose.example.yml  # Ejemplo de configuración Docker
+├── package.json        # Dependencias del frontend
 └── vite.config.js      # Configuración de Vite
 ```
 
@@ -138,5 +150,7 @@ La aplicación estará disponible en:
 
 - Nunca compartir el archivo `.env` con credenciales
 - Mantener segura la contraseña de administrador
-- Las imágenes se almacenan localmente en `/src/images/productos`
+- Las imágenes subidas se almacenan en `server/src/images`
+- Las imágenes estáticas del frontend van en `src/images`
 - La configuración de Docker puede contener información sensible
+- Los volúmenes de Docker `vite_node_modules` y `express_node_modules` mantienen las dependencias
