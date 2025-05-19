@@ -1,5 +1,6 @@
 # Dependencies
 /node_modules
+*/node_modules
 /.pnp
 .pnp.js
 
@@ -32,9 +33,5 @@ docker-compose.yml
 docker-compose.override.yml
 
 # Local files
-/src/images/productos/*
-!/src/images/productos/.gitkeep
-
-# Firebase config
-.firebaserc
-firebase-debug.log
+/src/images/*
+!/src/images/.gitkeep

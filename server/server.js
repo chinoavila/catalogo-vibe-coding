@@ -8,7 +8,7 @@ const app = express();
 // Configurar multer para el almacenamiento de archivos
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        const dir = path.join(__dirname, 'src/images/productos');
+        const dir = path.join(__dirname, 'src/images');
         // Crear el directorio si no existe
         if (!fs.existsSync(dir)) {
             fs.mkdirSync(dir, { recursive: true });
@@ -31,7 +31,7 @@ app.post('/upload', upload.single('image'), (req, res) => {
         // Devolver el nombre del archivo generado
         res.status(200).json({
             fileName: req.file.filename,
-            path: `/src/images/productos/${req.file.filename}`
+            path: `/src/images/${req.file.filename}`
         });
     } catch (error) {
         console.error('Error al subir archivo:', error);
