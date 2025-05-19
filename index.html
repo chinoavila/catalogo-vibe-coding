@@ -192,6 +192,36 @@
       </div>
     </div>
   </div>
+  <!-- Modal Slider de Producto -->
+  <div class="modal fade" id="modalImageSlider" tabindex="-1" aria-labelledby="modalImageSliderLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+      <div class="modal-content bg-dark">
+        <div class="modal-header border-0">
+          <h5 class="modal-title text-light" id="modalImageSliderLabel"></h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>        <div class="modal-body p-0">
+          <div class="image-slider position-relative">
+            <img src="" alt="" class="img-fluid rounded" id="sliderImage">
+            <div class="product-details text-light p-3">
+              <h4 class="product-title mb-2"></h4>
+              <p class="product-price fs-5"><span class="fw-bold text-pink"></span></p>
+              <p class="product-description"></p>
+            </div>
+            <button class="slider-nav prev-btn" id="prevProduct">
+              <svg width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+                <path fill-rule="evenodd" d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z"/>
+              </svg>
+            </button>
+            <button class="slider-nav next-btn" id="nextProduct">
+              <svg width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+                <path fill-rule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
   <script type="module" src="/src/main.js"></script>
   <!-- Botón Volver Arriba -->
   <button id="btn-scroll-top" class="btn-scroll-top" aria-label="Volver arriba">

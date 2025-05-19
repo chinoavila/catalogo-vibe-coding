@@ -202,6 +202,7 @@ const adminModule = (() => {
             document.getElementById('btn-edit-site').classList.remove('d-none');
             document.getElementById('logout-container').style.display = 'block';
             document.getElementById('btn-admin').style.display = 'none';
+            showToast('Credenciales correctas: se habilitó el modo administrador.', 'success');
             renderProducts(); // Re-renderizar productos para mostrar botones de edición
             return true;
         } else {
@@ -439,6 +440,94 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadSiteConfig();
 });
 
+// Función para mostrar la imagen en el slider
+function showImageSlider(product) {
+    const modal = new bootstrap.Modal(document.getElementById('modalImageSlider'));
+    const modalTitle = document.getElementById('modalImageSliderLabel');
+    const sliderImage = document.getElementById('sliderImage');
+    const productTitle = document.querySelector('#modalImageSlider .product-title');
+    const productPrice = document.querySelector('#modalImageSlider .product-price span');
+    const productDescription = document.querySelector('#modalImageSlider .product-description');
+    const prevBtn = document.getElementById('prevProduct');
+    const nextBtn = document.getElementById('nextProduct');
+    
+    // Encuentra el índice del producto actual
+    let currentIndex = products.findIndex(p => p._id === product._id);
+    function updateSliderContent(newProduct, newIndex) {
+        modalTitle.textContent = 'Vista del Producto';
+        sliderImage.src = newProduct.image || 'https://via.placeholder.com/800x600?text=Sin+Imagen';
+        sliderImage.alt = newProduct.description;
+        productTitle.textContent = 'Detalles del Producto';
+        productPrice.textContent = `$${newProduct.price}`;
+        productDescription.textContent = newProduct.description;
+        
+        // Actualizar estado de los botones de navegación
+        prevBtn.disabled = newIndex <= 0;
+        nextBtn.disabled = newIndex >= products.length - 1;
+        
+        // Actualizar el índice actual
+        currentIndex = newIndex;
+    }
+      // Configurar navegación
+    prevBtn.onclick = () => {
+        if (currentIndex > 0) {
+            updateSliderContent(products[currentIndex - 1], currentIndex - 1);
+            resetZoom();
+        }
+    };
+    
+    nextBtn.onclick = () => {
+        if (currentIndex < products.length - 1) {
+            updateSliderContent(products[currentIndex + 1], currentIndex + 1);
+            resetZoom();
+        }
+    };
+    
+    // También permitir navegación con teclado
+    const handleKeydown = (e) => {
+        if (e.key === 'ArrowLeft' && currentIndex > 0) {
+            prevBtn.click();
+        } else if (e.key === 'ArrowRight' && currentIndex < products.length - 1) {
+            nextBtn.click();
+        }
+    };
+    
+    document.addEventListener('keydown', handleKeydown);
+    
+    // Limpiar event listener al cerrar el modal
+    document.getElementById('modalImageSlider').addEventListener('hidden.bs.modal', () => {
+        document.removeEventListener('keydown', handleKeydown);
+    });
+    
+    updateSliderContent(product, currentIndex);
+
+    function resetZoom() {
+        isZoomed = false;
+        sliderImage.style.transform = 'scale(1)';
+        sliderImage.classList.remove('zoomed');
+    }
+
+    // Manejar zoom de imagen
+    let isZoomed = false;
+    sliderImage.addEventListener('click', function() {
+        if (!isZoomed) {
+            this.style.transform = 'scale(1.5)';
+            this.classList.add('zoomed');
+        } else {
+            resetZoom();
+        }
+        isZoomed = !isZoomed;
+    });
+
+    // Resetear zoom al cerrar el modal
+    document.getElementById('modalImageSlider').addEventListener('hidden.bs.modal', function () {
+        resetZoom();
+    });
+
+    modal.show();
+}
+
+// Modificar la función renderProducts para incluir el evento click en las imágenes
 function renderProducts() {
     const list = document.getElementById('product-list');
     list.innerHTML = '';
@@ -462,7 +551,7 @@ function renderProducts() {
         col.className = 'col-12 col-md-6 col-lg-4';
         let imageUrl = product.image || 'https://via.placeholder.com/300x180?text=Sin+Imagen';
         col.innerHTML = `        <div class="card product-card h-100 d-flex flex-column justify-content-between">
-            <img src="${imageUrl}" class="card-img-top" alt="${product.description}">
+            <img src="${imageUrl}" class="card-img-top" alt="${product.description}" data-product-id="${product._id}">
             <div class="card-body">
                 <p class="card-text">${product.description}</p>
                 <p class="card-text"><span class="fw-bold text-pink">$${product.price}</span></p>
@@ -472,6 +561,11 @@ function renderProducts() {
             </div>` : ''}
         </div>
         `;
+
+        // Agregar evento click a la imagen
+        const img = col.querySelector('.card-img-top');
+        img.addEventListener('click', () => showImageSlider(product));
+
         list.appendChild(col);
     });
 

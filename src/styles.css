@@ -209,6 +209,12 @@ section:nth-of-type(4) { animation-delay: 0.7s; }
     width: 100%;
     height: 200px;
     background: #fff;
+    cursor: pointer;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+.product-card .card-img-top:hover {
+    transform: scale(1.02);
+    opacity: 0.9;
 }
 .product-card .card-body {
     padding: 1rem 1.2rem 0.5rem 1.2rem;
@@ -500,6 +506,141 @@ section:nth-of-type(4) { animation-delay: 0.7s; }
 
 .btn-close-white {
     filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+/* Estilos para el slider de imágenes */
+#modalImageSlider .modal-content {
+    background: var(--main-bg) !important;
+}
+
+.image-slider {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.image-slider img {
+    max-height: 80vh;
+    width: auto;
+    max-width: 100%;
+    object-fit: contain;
+    cursor: zoom-in;
+}
+
+.image-slider img.zoomed {
+    cursor: zoom-out;
+}
+
+.product-details {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(5px);
+    border-radius: 0 0 0.5rem 0.5rem;
+    transform: translateY(100%);
+    transition: transform 0.3s ease;
+}
+
+.image-slider:hover .product-details {
+    transform: translateY(0);
+}
+
+.product-title {
+    font-size: 1.25rem;
+    margin: 0;
+}
+
+.product-price {
+    margin: 0.5rem 0;
+}
+
+/* Hacer que las imágenes del catálogo sean clickeables */
+.product-card .card-img-top {
+    cursor: pointer;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.product-card .card-img-top:hover {
+    transform: scale(1.02);
+    opacity: 0.9;
+}
+
+/* Estilos para los botones de navegación del slider */
+.slider-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0, 0, 0, 0.5);
+    border: none;
+    color: white;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(5px);
+}
+
+.slider-nav:hover {
+    background: var(--button-bg);
+    transform: translateY(-50%) scale(1.1);
+}
+
+.slider-nav:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    background: rgba(0, 0, 0, 0.3);
+    transform: translateY(-50%) scale(1) !important;
+}
+
+.slider-nav:not(:disabled):hover {
+    background: var(--button-bg);
+    transform: translateY(-50%) scale(1.1);
+}
+
+.prev-btn {
+    left: 20px;
+}
+
+.next-btn {
+    right: 20px;
+}
+
+.slider-nav svg {
+    width: 24px;
+    height: 24px;
+}
+
+#modalImageSlider .modal-body {
+    padding: 0;
+    background: var(--main-bg);
+}
+
+/* Para dispositivos móviles */
+@media (max-width: 768px) {
+    .slider-nav {
+        width: 36px;
+        height: 36px;
+    }
+    
+    .prev-btn {
+        left: 10px;
+    }
+    
+    .next-btn {
+        right: 10px;
+    }
+    
+    .slider-nav svg {
+        width: 20px;
+        height: 20px;
+    }
 }
 
 /* ...fin del código migrado de styles.css... */
