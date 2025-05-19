@@ -461,4 +461,45 @@ section:nth-of-type(4) { animation-delay: 0.7s; }
         transform: translateY(0);
     }
 }
+
+/* Estilos para los toast messages */
+.toast-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1060;
+}
+
+.toast {
+    background: var(--sidebar-bg) !important;
+    color: var(--text-main) !important;
+    border: 1px solid var(--sidebar-accent);
+    margin-bottom: 10px;
+    min-width: 250px;
+}
+
+.toast.bg-danger {
+    border-color: #dc3545;
+    background: #2c0b0e !important;
+}
+
+.toast.bg-success {
+    border-color: #198754;
+    background: #051b11 !important;
+}
+
+.toast-header {
+    background: transparent !important;
+    color: var(--text-main) !important;
+    border-bottom: 1px solid var(--sidebar-accent);
+}
+
+.toast-body {
+    padding: 12px;
+}
+
+.btn-close-white {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
 /* ...fin del código migrado de styles.css... */

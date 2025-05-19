@@ -83,10 +83,45 @@ async function loadSiteConfig() {
     }
 }
 
+// Función para mostrar mensajes toast
+function showToast(message, type = 'info') {
+    const toastContainer = document.querySelector('.toast-container');
+    const toastId = `toast-${Date.now()}`;
+    
+    const toastEl = document.createElement('div');
+    toastEl.className = `toast ${type === 'error' ? 'bg-danger' : type === 'success' ? 'bg-success' : ''}`;
+    toastEl.id = toastId;
+    
+    toastEl.innerHTML = `
+        <div class="toast-header">
+            <strong class="me-auto">${type === 'error' ? 'Error' : type === 'success' ? 'Éxito' : 'Información'}</strong>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body">${message}</div>
+    `;
+    
+    toastContainer.appendChild(toastEl);
+    
+    const toast = new bootstrap.Toast(toastEl, {
+        autohide: true,
+        delay: 3000
+    });
+    
+    toast.show();
+    
+    // Eliminar el toast del DOM cuando se oculte
+    toastEl.addEventListener('hidden.bs.toast', () => {
+        toastEl.remove();
+    });
+}
+
 // Función para guardar la configuración del sitio
 async function saveSiteConfig(event) {
     event.preventDefault();
-    if (!adminModule.isAdmin()) return alert('Acceso restringido.');
+    if (!adminModule.isAdmin()) {
+        showToast('Acceso restringido.', 'error');
+        return;
+    }
 
     try {
         const imageFile = document.getElementById('cover-image').files[0];
@@ -113,10 +148,10 @@ async function saveSiteConfig(event) {
         await setDoc(siteConfigRef, config);
         const modal = bootstrap.Modal.getInstance(document.getElementById('modalSiteConfig'));
         modal.hide();
-        alert('Configuración guardada correctamente');
+        showToast('Configuración guardada correctamente', 'success');
     } catch (error) {
         console.error('Error al guardar la configuración:', error);
-        alert('Error al guardar la configuración. Por favor intenta nuevamente.');
+        showToast('Error al guardar la configuración. Por favor intenta nuevamente.', 'error');
     }
 }
 
@@ -170,7 +205,7 @@ const adminModule = (() => {
             renderProducts(); // Re-renderizar productos para mostrar botones de edición
             return true;
         } else {
-            alert('Credenciales incorrectas.');
+            showToast('Credenciales incorrectas.', 'error');
             return false;
         }
     }
@@ -184,12 +219,18 @@ const adminModule = (() => {
     }
 
     async function addProduct(productosCol, data) {
-        if (!isAdmin) return alert('Acceso restringido.');
+        if (!isAdmin) {
+            showToast('Acceso restringido.', 'error');
+            return;
+        }
         await addDoc(productosCol, data);
     }
 
     async function deleteProduct(productosCol, id) {
-        if (!isAdmin) return alert('Acceso restringido.');
+        if (!isAdmin) {
+            showToast('Acceso restringido.', 'error');
+            return;
+        }
         await deleteDoc(doc(productosCol, id));
     }
 
@@ -320,12 +361,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Validar campos requeridos
         if (!description || isNaN(price)) {
-            return alert('Por favor completa la descripción y el precio');
+            showToast('Por favor completa la descripción y el precio', 'error');
+            return;
         }
         
         // Al agregar un nuevo producto, la imagen es requerida
         if (!id && !imageFile) {
-            return alert('Por favor selecciona una imagen para el nuevo producto');
+            showToast('Por favor selecciona una imagen para el nuevo producto', 'error');
+            return;
         }
 
         try {
@@ -345,7 +388,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (id) {
                 // Editar producto
-                if (!adminModule.isAdmin()) return alert('Acceso restringido.');
+                if (!adminModule.isAdmin()) {
+                    showToast('Acceso restringido.', 'error');
+                    return;
+                }
                 
                 // Si no hay imagen nueva, mantener la imagen existente
                 if (!imageFile) {
@@ -356,9 +402,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
 
                 await window.updateProduct(productosCol, id, productData);
+                showToast('Producto actualizado correctamente', 'success');
             } else {
                 // Agregar producto
                 await adminModule.addProduct(productosCol, productData);
+                showToast('Producto agregado correctamente', 'success');
             }
 
             // Cerrar el modal y limpiar el formulario
@@ -368,7 +416,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             this.reset();
         } catch (error) {
             console.error('Error al procesar el producto:', error);
-            alert('Error al guardar el producto. Por favor intenta nuevamente.');
+            showToast('Error al guardar el producto. Por favor intenta nuevamente.', 'error');
         }
     });
 
@@ -482,12 +530,21 @@ window.editProduct = function (id) {
 }
 
 window.updateProduct = async function (productosCol, id, data) {
-    if (!adminModule.isAdmin()) return alert('Acceso restringido.');
+    if (!adminModule.isAdmin()) {
+        showToast('Acceso restringido.', 'error');
+        return;
+    }
     const ref = doc(productosCol, id);
     await updateDoc(ref, data);
 }
 
 window.deleteProduct = async function (id) {
-    const productosCol = collection(db, 'productos');
-    await adminModule.deleteProduct(productosCol, id);
+    try {
+        const productosCol = collection(db, 'productos');
+        await adminModule.deleteProduct(productosCol, id);
+        showToast('Producto eliminado correctamente', 'success');
+    } catch (error) {
+        console.error('Error al eliminar el producto:', error);
+        showToast('Error al eliminar el producto', 'error');
+    }
 }
