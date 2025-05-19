@@ -1,5 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc, getDoc, setDoc } from "firebase/firestore";
+import bcrypt from 'bcryptjs';
 
 // Configuración de Firebase usand    let isAdmin = localStorage.getItem('isAdmin') === 'true';
     let adminPassword = ''; // Se cargará desde Firebase
@@ -240,7 +241,7 @@ async function saveImage(imageFile) {
 // --- Módulo de administración ---
 const adminModule = (() => {
     let isAdmin = localStorage.getItem('isAdmin') === 'true';
-    let adminPassword = import.meta.env.VITE_ADMIN_PASS; // Valor inicial que será actualizado desde Firebase
+    let adminPassword = ''; // Se actualizará desde Firebase
 
     // Función para actualizar la contraseña
     function updatePassword(newPassword) {
@@ -255,7 +256,22 @@ const adminModule = (() => {
             const docSnap = await getDoc(siteConfigRef);
             if (docSnap.exists()) {
                 const config = docSnap.data();
-                adminPassword = config.adminPassword || import.meta.env.VITE_ADMIN_PASS;
+                if (config.adminPassword) {
+                    adminPassword = config.adminPassword;
+                } else {
+                    // Si no hay contraseña, crear una por defecto
+                    adminPassword = await bcrypt.hash('admin123', 10);
+                    await updateDoc(siteConfigRef, {
+                        ...config,
+                        adminPassword: adminPassword
+                    });
+                }
+            } else {
+                // Si no existe el documento, crearlo con contraseña por defecto
+                adminPassword = await bcrypt.hash('admin123', 10);
+                await setDoc(siteConfigRef, {
+                    adminPassword: adminPassword
+                });
             }
         } catch (error) {
             console.error('Error al cargar contraseña de admin:', error);
@@ -264,21 +280,31 @@ const adminModule = (() => {
 
     async function login(pass) {
         await initPassword(); // Asegurar que tenemos la contraseña más reciente
-        if (pass === adminPassword) {            isAdmin = true;
-            localStorage.setItem('isAdmin', 'true');
-            document.getElementById('btn-add-product').classList.remove('d-none');
-            document.getElementById('btn-edit-site').classList.remove('d-none');
-            document.getElementById('logout-container').style.display = 'block';
-            document.getElementById('change-password-container').style.display = 'block';
-            document.getElementById('btn-admin').style.display = 'none';
-            showToast('Credenciales correctas: se habilitó el modo administrador.', 'success');
-            renderProducts(); // Re-renderizar productos para mostrar botones de edición
-            return true;
-        } else {
-            showToast('Credenciales incorrectas.', 'error');
+        try {
+            const isMatch = await bcrypt.compare(pass, adminPassword);
+            if (isMatch) {
+                isAdmin = true;
+                localStorage.setItem('isAdmin', 'true');
+                document.getElementById('btn-add-product').classList.remove('d-none');
+                document.getElementById('btn-edit-site').classList.remove('d-none');
+                document.getElementById('logout-container').style.display = 'block';
+                document.getElementById('change-password-container').style.display = 'block';
+                document.getElementById('btn-admin').style.display = 'none';
+                showToast('Credenciales correctas: se habilitó el modo administrador.', 'success');
+                renderProducts();
+                return true;
+            } else {
+                showToast('Credenciales incorrectas.', 'error');
+                return false;
+            }
+        } catch (error) {
+            console.error('Error al verificar la contraseña:', error);
+            showToast('Error al verificar las credenciales.', 'error');
             return false;
         }
-    }    function logout() {
+    }
+
+    function logout() {
         isAdmin = false;
         localStorage.removeItem('isAdmin');
         document.getElementById('btn-add-product').classList.add('d-none');
@@ -719,16 +745,19 @@ async function changePassword(currentPass, newPass) {
         }
 
         const config = docSnap.data();
-        const storedPassword = config.adminPassword || import.meta.env.VITE_ADMIN_PASS;
+        const storedPassword = config.adminPassword;
 
-        if (currentPass !== storedPassword) {
+        // Verificar la contraseña actual
+        const isMatch = await bcrypt.compare(currentPass, storedPassword);
+        if (!isMatch) {
             throw new Error('La contraseña actual es incorrecta');
         }
 
-        // Actualizar la contraseña en Firebase
+        // Encriptar y actualizar la nueva contraseña en Firebase
+        const hashedPassword = await bcrypt.hash(newPass, 10);
         await updateDoc(siteConfigRef, {
             ...config,
-            adminPassword: newPass
+            adminPassword: hashedPassword
         });
 
         // Actualizar la contraseña en el módulo de administración

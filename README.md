@@ -1,4 +1,82 @@
-# Catálogo de Productos
+# Catálogo de Productos con Vibe Coding
+
+Aplicación web para gestionar un catálogo de productos con interfaz de administración, desarrollada con Vibe Coding.
+
+## Tecnologías Utilizadas
+
+- **Frontend:**
+  - Vite + JavaScript
+  - Bootstrap 5
+  - Firebase Web SDK
+  - bcryptjs para encriptación
+
+- **Backend:**
+  - Express.js (servidor para manejo de imágenes)
+  - Firebase Cloud Firestore
+
+## Características
+
+- Visualización de productos en formato de catálogo
+- Panel de administración protegido con contraseña
+- Gestión de productos (agregar, editar, eliminar)
+- Gestión de configuración del sitio
+- Almacenamiento de imágenes local
+- Base de datos en tiempo real con Firebase
+
+## Configuración de Firebase
+
+1. Crear un proyecto en Firebase:
+   - Ir a [Firebase Console](https://console.firebase.google.com/)
+   - Crear nuevo proyecto
+   - Habilitar Cloud Firestore
+
+2. Configurar Cloud Firestore:
+   - En la consola de Firebase, ir a "Firestore Database"
+   - Crear base de datos en modo de prueba
+   - Crear las siguientes colecciones:
+     ```
+     config/
+       └─ site/  # Documento para configuración del sitio
+          ├─ siteName: string
+          ├─ slogan1: string
+          ├─ slogan2: string
+          ├─ aboutText: string
+          ├─ contactText: string
+          ├─ schedule: string
+          ├─ shippingInfo: string
+          ├─ instagramUrl: string
+          ├─ instagramHandle: string
+          ├─ coverImage: string
+          └─ adminPassword: string (hash bcrypt)
+
+     productos/  # Colección de productos
+       └─ [auto-id]/  # Documentos generados automáticamente
+          ├─ description: string
+          ├─ price: string
+          └─ image: string
+     ```
+
+3. Configurar las reglas de seguridad en Firestore:
+   ```javascript
+   rules_version = '2';
+   service cloud.firestore {
+     match /databases/{database}/documents {
+       // Permitir lectura a todos
+       match /{document=**} {
+         allow read: if true;
+       }
+       
+       // Permitir escritura solo si está autenticado como admin
+       match /productos/{productId} {
+         allow write: if request.auth != null;
+       }
+       
+       match /config/{configId} {
+         allow write: if request.auth != null;
+       }
+     }
+   }
+   ```
 
 ## Configuración del Proyecto
 
@@ -11,7 +89,7 @@
 
 1. Clonar el repositorio:
 ```bash
-git clone <url-del-repositorio>
+git clone https://github.com/chinoavila/catalogo-vibe-coding.git
 cd catalogoProductos
 ```
 
