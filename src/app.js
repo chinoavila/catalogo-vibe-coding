@@ -1,8 +1,30 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc, getDoc, setDoc } from "firebase/firestore";
 
-// Configuración de Firebase usando variables de entorno Vite
-const firebaseConfig = {
+// Configuración de Firebase usand    let isAdmin = localStorage.getItem('isAdmin') === 'true';
+    let adminPassword = ''; // Se cargará desde Firebase
+    
+    async function initAdminPassword() {
+        try {
+            const docSnap = await getDoc(siteConfigRef);
+            if (docSnap.exists()) {
+                const config = docSnap.data();
+                adminPassword = config.adminPassword || import.meta.env.VITE_ADMIN_PASS; // Fallback a la variable de entorno
+            }
+        } catch (error) {
+            console.error('Error al cargar contraseña de admin:', error);
+            adminPassword = import.meta.env.VITE_ADMIN_PASS; // Fallback a la variable de entorno
+        }
+    }
+    
+    async function login(pass) {
+        await initAdminPassword(); // Asegurar que tenemos la contraseña más reciente
+        if (pass === adminPassword) {
+            isAdmin = true;
+            localStorage.setItem('isAdmin', 'true');
+        }
+    }
+    const firebaseConfig = {
     apiKey: import.meta.env.VITE_API_KEY,
     authDomain: import.meta.env.VITE_AUTH_DOMAIN,
     projectId: import.meta.env.VITE_PROJECT_ID,
@@ -63,9 +85,13 @@ async function loadSiteConfig() {
             document.getElementById('about-content').textContent = config.aboutText || '[Texto Quiénes somos]';
             document.getElementById('contact-content').textContent = config.contactText || '[Texto de Contacto]';
             document.getElementById('schedule-text').textContent = config.schedule || '[Horario de atención]';
-            document.getElementById('shipping-text').textContent = config.shippingInfo || '[Información de envíos]';
-            document.getElementById('instagram-link').href = config.instagramUrl || '#';
+            document.getElementById('shipping-text').textContent = config.shippingInfo || '[Información de envíos]';            document.getElementById('instagram-link').href = config.instagramUrl || '#';
             document.getElementById('instagram-handle').textContent = config.instagramHandle || '[Usuario de Instagram]';
+
+            // Actualizar la contraseña del módulo de administración si existe
+            if (config.adminPassword) {
+                adminModule.updatePassword(config.adminPassword);
+            }
 
             // Agregar evento para actualizar el formulario cuando se abre el modal
             document.getElementById('btn-edit-site').addEventListener('click', updateForm);
@@ -133,7 +159,11 @@ async function saveSiteConfig(event) {
     if (!adminModule.isAdmin()) {
         showToast('Acceso restringido.', 'error');
         return;
-    } try {
+    }    try {
+        // Obtener la configuración actual para preservar la contraseña
+        const docSnap = await getDoc(siteConfigRef);
+        const currentConfig = docSnap.exists() ? docSnap.data() : {};
+        
         const imageFile = document.getElementById('cover-image').files[0];
         const config = {
             siteName: document.getElementById('site-name').value,
@@ -144,7 +174,8 @@ async function saveSiteConfig(event) {
             schedule: document.getElementById('schedule').value,
             shippingInfo: document.getElementById('shipping-info').value,
             instagramUrl: document.getElementById('instagram-url').value,
-            instagramHandle: document.getElementById('instagram-handle-text').value
+            instagramHandle: document.getElementById('instagram-handle-text').value,
+            adminPassword: currentConfig.adminPassword || import.meta.env.VITE_ADMIN_PASS // Preservar la contraseña existente
         };
 
         if (imageFile) {
@@ -208,16 +239,37 @@ async function saveImage(imageFile) {
 
 // --- Módulo de administración ---
 const adminModule = (() => {
-    // Obtener credenciales del administrador desde variables de entorno
-    const ADMIN_PASS = import.meta.env.VITE_ADMIN_PASS;
     let isAdmin = localStorage.getItem('isAdmin') === 'true';
-    function login(pass) {
-        if (pass === ADMIN_PASS) {
-            isAdmin = true;
+    let adminPassword = import.meta.env.VITE_ADMIN_PASS; // Valor inicial que será actualizado desde Firebase
+
+    // Función para actualizar la contraseña
+    function updatePassword(newPassword) {
+        if (newPassword) {
+            adminPassword = newPassword;
+        }
+    }
+
+    // Función para inicializar la contraseña desde Firebase
+    async function initPassword() {
+        try {
+            const docSnap = await getDoc(siteConfigRef);
+            if (docSnap.exists()) {
+                const config = docSnap.data();
+                adminPassword = config.adminPassword || import.meta.env.VITE_ADMIN_PASS;
+            }
+        } catch (error) {
+            console.error('Error al cargar contraseña de admin:', error);
+        }
+    }
+
+    async function login(pass) {
+        await initPassword(); // Asegurar que tenemos la contraseña más reciente
+        if (pass === adminPassword) {            isAdmin = true;
             localStorage.setItem('isAdmin', 'true');
             document.getElementById('btn-add-product').classList.remove('d-none');
             document.getElementById('btn-edit-site').classList.remove('d-none');
             document.getElementById('logout-container').style.display = 'block';
+            document.getElementById('change-password-container').style.display = 'block';
             document.getElementById('btn-admin').style.display = 'none';
             showToast('Credenciales correctas: se habilitó el modo administrador.', 'success');
             renderProducts(); // Re-renderizar productos para mostrar botones de edición
@@ -226,12 +278,12 @@ const adminModule = (() => {
             showToast('Credenciales incorrectas.', 'error');
             return false;
         }
-    }
-    function logout() {
+    }    function logout() {
         isAdmin = false;
         localStorage.removeItem('isAdmin');
         document.getElementById('btn-add-product').classList.add('d-none');
         document.getElementById('btn-edit-site').classList.add('d-none');
+        document.getElementById('change-password-container').style.display = 'none';
         document.getElementById('btn-admin').style.display = '';
         renderProducts();
     }
@@ -250,13 +302,11 @@ const adminModule = (() => {
             return;
         }
         await deleteDoc(doc(productosCol, id));
-    }
-
-    function isAdminCheck() {
+    }    function isAdminCheck() {
         return isAdmin;
     }
 
-    return { login, logout, addProduct, deleteProduct, isAdmin: isAdminCheck };
+    return { login, logout, addProduct, deleteProduct, isAdmin: isAdminCheck, updatePassword };
 })();
 // --- Fin módulo administración ---
 
@@ -566,7 +616,7 @@ function renderProducts() {
     paginatedProducts.forEach((product) => {
         const col = document.createElement('div');
         col.className = 'col-12 col-md-6 col-lg-4';
-        let imageUrl = product.image || 'https://via.placeholder.com/300x180?text=Sin+Imagen';
+        let imageUrl = product.image || 'https://placehold.co/600x400?text=Image+Not+Found';
         col.innerHTML = `        <div class="card product-card h-100 d-flex flex-column justify-content-between">
             <img src="${imageUrl}" class="card-img-top" alt="${product.description}" data-product-id="${product._id}">
             <div class="card-body">
@@ -659,3 +709,81 @@ window.deleteProduct = async function (id) {
         showToast('Error al eliminar el producto', 'error');
     }
 }
+
+// Función para cambiar la contraseña
+async function changePassword(currentPass, newPass) {
+    try {
+        const docSnap = await getDoc(siteConfigRef);
+        if (!docSnap.exists()) {
+            throw new Error('No existe la configuración del sitio');
+        }
+
+        const config = docSnap.data();
+        const storedPassword = config.adminPassword || import.meta.env.VITE_ADMIN_PASS;
+
+        if (currentPass !== storedPassword) {
+            throw new Error('La contraseña actual es incorrecta');
+        }
+
+        // Actualizar la contraseña en Firebase
+        await updateDoc(siteConfigRef, {
+            ...config,
+            adminPassword: newPass
+        });
+
+        // Actualizar la contraseña en el módulo de administración
+        adminModule.updatePassword(newPass);
+        
+        return true;
+    } catch (error) {
+        console.error('Error al cambiar la contraseña:', error);
+        throw error;
+    }
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    // ...existing code...
+
+    // Event listener para el formulario de cambio de contraseña
+    document.getElementById('change-password-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const currentPassword = document.getElementById('current-password').value;
+        const newPassword = document.getElementById('new-password').value;
+        const confirmPassword = document.getElementById('confirm-password').value;
+        const errorDiv = document.getElementById('password-error');
+
+        // Validar que las contraseñas nuevas coincidan
+        if (newPassword !== confirmPassword) {
+            errorDiv.textContent = 'Las contraseñas no coinciden';
+            errorDiv.classList.remove('d-none');
+            return;
+        }
+
+        // Validar longitud mínima
+        if (newPassword.length < 6) {
+            errorDiv.textContent = 'La contraseña debe tener al menos 6 caracteres';
+            errorDiv.classList.remove('d-none');
+            return;
+        }
+
+        try {
+            await changePassword(currentPassword, newPassword);
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalChangePassword'));
+            modal.hide();
+            showToast('Contraseña cambiada correctamente', 'success');
+            this.reset();
+            errorDiv.classList.add('d-none');
+        } catch (error) {
+            errorDiv.textContent = error.message;
+            errorDiv.classList.remove('d-none');
+        }
+    });
+
+    // Limpiar el formulario y errores al cerrar el modal
+    document.getElementById('modalChangePassword').addEventListener('hidden.bs.modal', function () {
+        document.getElementById('change-password-form').reset();
+        document.getElementById('password-error').classList.add('d-none');
+    });
+
+    // ...existing code...
+});

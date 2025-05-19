@@ -26,7 +26,9 @@
           <li class="nav-item"><a class="nav-link d-none" href="#" id="btn-edit-site" data-bs-toggle="modal"
               data-bs-target="#modalSiteConfig">Editar Sitio</a></li>
           <li class="nav-item"><a class="nav-link" href="#" id="btn-admin" data-bs-toggle="modal"
-              data-bs-target="#modalAdminLogin">Administración</a></li>
+              data-bs-target="#modalAdminLogin">Administración</a></li>          <li class="nav-item" id="change-password-container" style="display: none;">
+            <a class="nav-link" href="#" id="btn-change-password" data-bs-toggle="modal" data-bs-target="#modalChangePassword">Cambiar Contraseña</a>
+          </li>
           <li class="nav-item" id="logout-container" style="display: none;">
             <a class="nav-link text-danger" href="#" id="btn-logout">Cerrar sesión</a>
           </li>
@@ -36,7 +38,7 @@
   </nav>
   <main class="mx-auto py-4" style="width:90vw;max-width:1800px;">
     <section id="portada" class="mb-5 text-center border-0 bg-transparent shadow-none">
-      <img id="header-image" src="#" alt="Portada de la tienda" class="img-fluid rounded-4 shadow mb-4"
+      <img id="header-image" src="https://placehold.co/600x400?text=Image+Not+Found" alt="Portada de la tienda" class="img-fluid rounded-4 shadow mb-4"
         style="max-height:340px;object-fit:cover;width:100%;">
       <h1 id="slogan1" class="display-4 fw-bold">[Slogan principal]</h1>
       <p id="slogan2" class="lead">[Slogan secundario]</p>
@@ -219,6 +221,38 @@
             </button>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+  <!-- Modal para cambiar contraseña -->
+  <div class="modal fade" id="modalChangePassword" tabindex="-1" aria-labelledby="modalChangePasswordLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content bg-dark text-light">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalChangePasswordLabel">Cambiar Contraseña</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <form id="change-password-form" autocomplete="off">
+          <div class="modal-body">
+            <div class="mb-3">
+              <label for="current-password" class="form-label">Contraseña Actual</label>
+              <input type="password" class="form-control" id="current-password" required>
+            </div>
+            <div class="mb-3">
+              <label for="new-password" class="form-label">Nueva Contraseña</label>
+              <input type="password" class="form-control" id="new-password" required>
+            </div>
+            <div class="mb-3">
+              <label for="confirm-password" class="form-label">Confirmar Nueva Contraseña</label>
+              <input type="password" class="form-control" id="confirm-password" required>
+            </div>
+            <div id="password-error" class="text-danger d-none">Las contraseñas no coinciden</div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-pink">Cambiar Contraseña</button>
+          </div>
+        </form>
       </div>
     </div>
   </div>
