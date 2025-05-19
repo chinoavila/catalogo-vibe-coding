@@ -1,0 +1,41 @@
+version: '3.8'
+services:
+  vite-app:
+    image: node:20-alpine
+    container_name: vite-catalogo
+    working_dir: /app
+    volumes:
+      - ./:/app
+    ports:
+      - "5173:5173"
+    command: sh -c "npm run dev -- --host"    
+    environment:
+      - NODE_ENV=development
+      - VITE_API_KEY=${VITE_API_KEY}
+      - VITE_AUTH_DOMAIN=${VITE_AUTH_DOMAIN}
+      - VITE_PROJECT_ID=${VITE_PROJECT_ID}
+      - VITE_MESSAGING_SENDER_ID=${VITE_MESSAGING_SENDER_ID}
+      - VITE_APP_ID=${VITE_APP_ID}
+      - VITE_ADMIN_PASS=${VITE_ADMIN_PASS}
+    networks:
+      - app-network
+    depends_on:
+      - express-server
+
+  express-server:
+    image: node:20-alpine
+    container_name: express-upload
+    working_dir: /app
+    volumes:
+      - ./:/app
+    ports:
+      - "3000:3000"
+    command: sh -c "npm run server"
+    environment:
+      - PORT=3000
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
