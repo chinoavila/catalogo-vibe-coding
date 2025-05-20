@@ -42,6 +42,14 @@ app.post('/upload', upload.single('image'), (req, res) => {
 // Servir archivos estáticos
 app.use('/src/images', express.static(path.join(__dirname, 'src/images')));
 
+// Servir archivos estáticos del build de Vite
+app.use(express.static(path.join(__dirname, 'dist')));
+
+// Todas las demás rutas sirven index.html para SPA
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+});
+
 // Usar variable de entorno para el puerto
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

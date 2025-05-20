@@ -6,7 +6,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "server": "node server.js",
-    "start": "concurrently \"npm run dev\" \"npm run server\""
+    "start": "npm run build && node server.js",
+    "dev:all": "concurrently \"npm run dev\" \"npm run server\""
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
