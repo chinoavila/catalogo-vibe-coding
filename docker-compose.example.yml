@@ -1,47 +1,26 @@
 version: '3.8'
 services:
-  vite-app:
+  app:
     image: node:20-alpine
-    container_name: vite-catalogo
+    container_name: catalogo-vibe
     working_dir: /app
     volumes:
       - ./:/app
-      - vite_node_modules:/app/node_modules
+      - node_modules:/app/node_modules
+      - ./src/images:/app/images
     ports:
       - "5173:5173"
-    command: sh -c "npm install && npm run dev -- --host"    
-    environment:
-      - NODE_ENV=development
-      - VITE_API_KEY=${VITE_API_KEY}
-      - VITE_AUTH_DOMAIN=${VITE_AUTH_DOMAIN}
-      - VITE_PROJECT_ID=${VITE_PROJECT_ID}
-      - VITE_MESSAGING_SENDER_ID=${VITE_MESSAGING_SENDER_ID}
-      - VITE_APP_ID=${VITE_APP_ID}
-    networks:
-      - app-network
-    depends_on:
-      - express-server
-
-  express-server:
-    image: node:20-alpine
-    container_name: express-upload
-    working_dir: /app
-    volumes:
-      - ./server:/app
-      - express_node_modules:/app/node_modules
-      - ./src/images:/app/src/images
-    ports:
       - "3000:3000"
     command: sh -c "npm install && npm start"
     environment:
+      - NODE_ENV=development
       - PORT=3000
-    networks:
-      - app-network
+      - VITE_API_KEY=your_api_key_here
+      - VITE_AUTH_DOMAIN=your_auth_domain_here
+      - VITE_PROJECT_ID=your_project_id_here
+      - VITE_MESSAGING_SENDER_ID=your_sender_id_here
+      - VITE_APP_ID=your_app_id_here
+      - VITE_ADMIN_PASS=your_admin_pass_here
 
 volumes:
-  vite_node_modules:
-  express_node_modules:
-
-networks:
-  app-network:
-    driver: bridge
+  node_modules:

@@ -131,19 +131,15 @@ La aplicación estará disponible en:
 ```
 .
 ├── src/
-│   ├── images/          # Almacenamiento de imágenes del frontend
-│   ├── app.js          # Lógica principal de la aplicación
-│   ├── main.js         # Punto de entrada
-│   └── styles.css      # Estilos
-├── server/
-│   ├── package.json    # Dependencias del servidor
-│   ├── server.js       # Servidor Express para imágenes
-│   └── src/
-│       └── images/     # Almacenamiento de imágenes subidas
-├── docker-compose.yml   # Configuración de Docker
+│   ├── images/         # Almacenamiento de imágenes
+│   ├── app.js         # Lógica principal de la aplicación
+│   ├── main.js        # Punto de entrada
+│   └── styles.css     # Estilos
+├── server.js          # Servidor Express para imágenes
+├── docker-compose.yml # Configuración de Docker
 ├── docker-compose.example.yml  # Ejemplo de configuración Docker
-├── package.json        # Dependencias del frontend
-└── vite.config.js      # Configuración de Vite
+├── package.json       # Dependencias del proyecto
+└── vite.config.js     # Configuración de Vite
 ```
 
 ### Notas de Seguridad
