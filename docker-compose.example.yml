@@ -9,11 +9,10 @@ services:
       - node_modules:/app/node_modules
     ports:
       - "5173:5173"
-      - "3000:3000"
+      - "9005:9005"
     command: sh -c "npm run dev -- --host"
     environment:
       - NODE_ENV=development
-      - PORT=3000
       - VITE_API_KEY=your_api_key_here
       - VITE_AUTH_DOMAIN=your_auth_domain_here
       - VITE_PROJECT_ID=your_project_id_here
