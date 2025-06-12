@@ -7,11 +7,10 @@ services:
     volumes:
       - ./:/app
       - node_modules:/app/node_modules
-      - ./src/images:/app/images
     ports:
       - "5173:5173"
       - "3000:3000"
-    command: sh -c "npm install && npm start"
+    command: sh -c "npm run dev -- --host"
     environment:
       - NODE_ENV=development
       - PORT=3000

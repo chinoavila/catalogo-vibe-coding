@@ -1,37 +1,75 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc, getDoc, setDoc } from "firebase/firestore";
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import bcrypt from 'bcryptjs';
 
-// Configuración de Firebase usand    let isAdmin = localStorage.getItem('isAdmin') === 'true';
-    let adminPassword = ''; // Se cargará desde Firebase
-    
-    async function initAdminPassword() {
-        try {
-            const docSnap = await getDoc(siteConfigRef);
-            if (docSnap.exists()) {
-                const config = docSnap.data();
-                adminPassword = config.adminPassword || import.meta.env.VITE_ADMIN_PASS; // Fallback a la variable de entorno
-            }
-        } catch (error) {
-            console.error('Error al cargar contraseña de admin:', error);
-            adminPassword = import.meta.env.VITE_ADMIN_PASS; // Fallback a la variable de entorno
-        }
-    }
-    
-    async function login(pass) {
-        await initAdminPassword(); // Asegurar que tenemos la contraseña más reciente
-        if (pass === adminPassword) {
-            isAdmin = true;
-            localStorage.setItem('isAdmin', 'true');
-        }
-    }
+// Función para verificar la conexión a Firebase
+async function checkFirebaseConnection() {
     const firebaseConfig = {
+        apiKey: import.meta.env.VITE_API_KEY,
+        authDomain: import.meta.env.VITE_AUTH_DOMAIN,
+        projectId: import.meta.env.VITE_PROJECT_ID,
+        storageBucket: import.meta.env.VITE_STORAGE_BUCKET,
+        messagingSenderId: import.meta.env.VITE_MESSAGING_SENDER_ID,
+        appId: import.meta.env.VITE_APP_ID,
+    };
+
+    try {
+        console.log('Iniciando Firebase...');
+        const app = initializeApp(firebaseConfig);
+        console.log('Firebase inicializado correctamente');
+
+        console.log('Iniciando Firestore...');
+        const db = getFirestore(app);
+        console.log('Firestore inicializado correctamente');
+
+        console.log('Probando conexión a Firestore...');
+        const testDoc = doc(db, 'config', 'site');
+        const docSnap = await getDoc(testDoc);
+        
+        if (docSnap.exists()) {
+            console.log('✅ Conexión exitosa a Firestore. Datos recuperados:', docSnap.data());
+            return true;
+        } else {
+            console.log('⚠️ Conexión exitosa pero el documento no existe');
+            return false;
+        }
+    } catch (error) {
+        console.error('❌ Error al conectar con Firebase:', error);
+        return false;
+    }
+}
+
+// Configuración de Firebase 
+let adminPassword = ''; // Se cargará desde Firebase
+
+async function initAdminPassword() {
+    try {
+        const docSnap = await getDoc(siteConfigRef);
+        if (docSnap.exists()) {
+            const config = docSnap.data();
+            adminPassword = config.adminPassword || import.meta.env.VITE_ADMIN_PASS; // Fallback a la variable de entorno
+        }
+    } catch (error) {
+        console.error('Error al cargar contraseña de admin:', error);
+        adminPassword = import.meta.env.VITE_ADMIN_PASS; // Fallback a la variable de entorno
+    }
+}
+
+async function login(pass) {
+    await initAdminPassword(); // Asegurar que tenemos la contraseña más reciente
+    if (pass === adminPassword) {
+        isAdmin = true;
+        localStorage.setItem('isAdmin', 'true');
+    }
+}
+const firebaseConfig = {
     apiKey: import.meta.env.VITE_API_KEY,
     authDomain: import.meta.env.VITE_AUTH_DOMAIN,
     projectId: import.meta.env.VITE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_STORAGE_BUCKET,
     messagingSenderId: import.meta.env.VITE_MESSAGING_SENDER_ID,
     appId: import.meta.env.VITE_APP_ID,
-    measurementId: import.meta.env.VITE_MEASUREMENT_ID
 };
 
 const app = initializeApp(firebaseConfig);
@@ -86,7 +124,7 @@ async function loadSiteConfig() {
             document.getElementById('about-content').textContent = config.aboutText || '[Texto Quiénes somos]';
             document.getElementById('contact-content').textContent = config.contactText || '[Texto de Contacto]';
             document.getElementById('schedule-text').textContent = config.schedule || '[Horario de atención]';
-            document.getElementById('shipping-text').textContent = config.shippingInfo || '[Información de envíos]';            document.getElementById('instagram-link').href = config.instagramUrl || '#';
+            document.getElementById('shipping-text').textContent = config.shippingInfo || '[Información de envíos]'; document.getElementById('instagram-link').href = config.instagramUrl || '#';
             document.getElementById('instagram-handle').textContent = config.instagramHandle || '[Usuario de Instagram]';
 
             // Actualizar la contraseña del módulo de administración si existe
@@ -160,11 +198,11 @@ async function saveSiteConfig(event) {
     if (!adminModule.isAdmin()) {
         showToast('Acceso restringido.', 'error');
         return;
-    }    try {
+    } try {
         // Obtener la configuración actual para preservar la contraseña
         const docSnap = await getDoc(siteConfigRef);
         const currentConfig = docSnap.exists() ? docSnap.data() : {};
-        
+
         const imageFile = document.getElementById('cover-image').files[0];
         const config = {
             siteName: document.getElementById('site-name').value,
@@ -177,13 +215,22 @@ async function saveSiteConfig(event) {
             instagramUrl: document.getElementById('instagram-url').value,
             instagramHandle: document.getElementById('instagram-handle-text').value,
             adminPassword: currentConfig.adminPassword || import.meta.env.VITE_ADMIN_PASS // Preservar la contraseña existente
-        };
-
-        if (imageFile) {
+        };        if (imageFile) {
             // Si se seleccionó una nueva imagen, procesarla y actualizar
-            const coverImage = await saveImage(imageFile);
-            if (coverImage) {
-                config.coverImage = coverImage;
+            try {
+                const timestamp = Date.now();
+                const fileName = `${timestamp}_${imageFile.name}`;
+                const storageRef = ref(storage, `sitio/${fileName}`);
+                
+                // Subir la imagen
+                await uploadBytes(storageRef, imageFile);
+                
+                // Obtener la URL de descarga
+                const downloadURL = await getDownloadURL(storageRef);
+                config.coverImage = downloadURL;
+            } catch (error) {
+                console.error("Error guardando la imagen de portada:", error);
+                throw error;
             }
         } else {
             // Si no hay nueva imagen, recuperar la imagen actual del header
@@ -191,10 +238,10 @@ async function saveSiteConfig(event) {
             if (currentImage && !currentImage.includes('[URL imagen de portada]')) {
                 config.coverImage = currentImage;
             }
-        }        await setDoc(siteConfigRef, config);
+        } await setDoc(siteConfigRef, config);
         const modal = bootstrap.Modal.getInstance(document.getElementById('modalSiteConfig'));
         modal.hide();
-        
+
         // Recargar la configuración del sitio inmediatamente
         await loadSiteConfig();
         showToast('Configuración guardada correctamente', 'success');
@@ -208,33 +255,39 @@ let products = [];
 const PRODUCTS_PER_PAGE = 6; // Número de productos por página
 let currentPage = 1; // Página actual
 
-// Función para guardar imagen localmente
+// Inicializar Firebase Storage
+const storage = getStorage(app);
+
+// Función para guardar imagen en Firebase Storage
 async function saveImage(imageFile) {
     try {
-        const formData = new FormData();
-        formData.append('image', imageFile);
+        const timestamp = Date.now();
+        const fileName = `${timestamp}_${imageFile.name}`;
+        const storageRef = ref(storage, `productos/${fileName}`);
 
-        try {
-            // Enviar la imagen al servidor Express para guardarla
-            const response = await fetch('/upload', {
-                method: 'POST',
-                body: formData
-            });
+        // Subir la imagen
+        await uploadBytes(storageRef, imageFile);
 
-            if (!response.ok) {
-                throw new Error('Error al subir la imagen');
-            }
-
-            // Obtener la ruta del archivo del servidor
-            const data = await response.json();
-            return data.path;
-        } catch (error) {
-            console.error("Error guardando la imagen:", error);
-            throw error;
-        }
+        // Obtener la URL de descarga
+        const downloadURL = await getDownloadURL(storageRef);
+        return downloadURL;
     } catch (error) {
-        console.error("Error procesando la imagen:", error);
+        console.error("Error guardando la imagen:", error);
         throw error;
+    }
+}
+
+// Función para eliminar imagen de Firebase Storage
+async function deleteImage(imageUrl) {
+    try {
+        if (!imageUrl) return;
+
+        // Extraer la ruta del storage de la URL
+        const imageRef = ref(storage, imageUrl);
+        await deleteObject(imageRef);
+    } catch (error) {
+        console.error("Error eliminando la imagen:", error);
+        // No lanzar el error para permitir eliminar el producto aunque falle la eliminación de la imagen
     }
 }
 
@@ -328,7 +381,7 @@ const adminModule = (() => {
             return;
         }
         await deleteDoc(doc(productosCol, id));
-    }    function isAdminCheck() {
+    } function isAdminCheck() {
         return isAdmin;
     }
 
@@ -558,7 +611,7 @@ function showImageSlider(product) {
         prevBtn.disabled = newIndex <= 0;
         nextBtn.disabled = newIndex >= products.length - 1;
 
-        // Actualizar el índice actual
+        // Actualizar el índice current
         currentIndex = newIndex;
     }
     // Configurar navegación
@@ -728,6 +781,12 @@ window.updateProduct = async function (productosCol, id, data) {
 window.deleteProduct = async function (id) {
     try {
         const productosCol = collection(db, 'productos');
+        const product = products.find(p => p._id === id);
+
+        if (product && product.image) {
+            await deleteImage(product.image);
+        }
+
         await adminModule.deleteProduct(productosCol, id);
         showToast('Producto eliminado correctamente', 'success');
     } catch (error) {
@@ -762,7 +821,7 @@ async function changePassword(currentPass, newPass) {
 
         // Actualizar la contraseña en el módulo de administración
         adminModule.updatePassword(newPass);
-        
+
         return true;
     } catch (error) {
         console.error('Error al cambiar la contraseña:', error);
@@ -774,7 +833,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ...existing code...
 
     // Event listener para el formulario de cambio de contraseña
-    document.getElementById('change-password-form').addEventListener('submit', async function(e) {
+    document.getElementById('change-password-form').addEventListener('submit', async function (e) {
         e.preventDefault();
         const currentPassword = document.getElementById('current-password').value;
         const newPassword = document.getElementById('new-password').value;
@@ -815,4 +874,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // ...existing code...
+});
+
+// Ejecutar verificación cuando el DOM esté listo
+document.addEventListener('DOMContentLoaded', async () => {
+    const isConnected = await checkFirebaseConnection();
+    if (isConnected) {
+        console.log('🚀 La aplicación está lista y conectada a Firebase');
+    } else {
+        console.error('❌ Hay problemas con la conexión a Firebase');
+        // Mostrar mensaje de error en la UI
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'alert alert-danger fixed-top m-3';
+        errorDiv.innerHTML = `
+            <strong>Error de conexión</strong><br>
+            No se pudo conectar con la base de datos. 
+            Por favor, verifica tu conexión a internet y la configuración de Firebase.
+        `;
+        document.body.appendChild(errorDiv);
+    }
 });

@@ -32,6 +32,6 @@ Thumbs.db
 docker-compose.yml
 docker-compose.override.yml
 
-# Local files
-/src/images/*
-!/src/images/.gitkeep
+# Archivos de Firebase
+**fire**
+**.rules
