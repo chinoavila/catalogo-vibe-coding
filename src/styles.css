@@ -1,4 +1,3 @@
-/* ...código de styles.css migrado aquí... */
 :root {
     --main-bg: #18141c; /* negro profundo */
     --sidebar-bg: #2d0036; /* violeta oscuro */
@@ -643,4 +642,3 @@ section:nth-of-type(4) { animation-delay: 0.7s; }
     }
 }
 
-/* ...fin del código migrado de styles.css... */

@@ -389,6 +389,28 @@ const adminModule = (() => {
 })();
 // --- Fin módulo administración ---
 
+// Variables para el ordenamiento
+let sortDirection = 'asc'; // 'asc' o 'desc'
+
+// Función para ordenar productos por precio
+function sortProductsByPrice() {
+    products.sort((a, b) => {
+        const multiplier = sortDirection === 'asc' ? 1 : -1;
+        return (parseFloat(a.price) - parseFloat(b.price)) * multiplier;
+    });
+    renderProducts();
+    
+    // Actualizar el icono del botón
+    const sortIcon = document.getElementById('sort-icon');
+    sortIcon.textContent = sortDirection === 'asc' ? '↑' : '↓';
+}
+
+// Event listener para el botón de ordenamiento
+document.getElementById('btn-sort-price').addEventListener('click', () => {
+    sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+    sortProductsByPrice();
+});
+
 // Escuchar cambios en Firestore y actualizar la galería
 document.addEventListener('DOMContentLoaded', async () => {
     // Cargar la configuración del sitio
@@ -439,6 +461,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             const data = docSnap.data();
             products.push({ ...data, _id: docSnap.id });
         });
+        // Aplicar el ordenamiento actual
+        sortProductsByPrice();
         renderProducts();
     });
 
