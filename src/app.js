@@ -90,6 +90,7 @@ function updateForm() {
     const currentShippingInfo = document.getElementById('shipping-text').textContent;
     const currentInstagramUrl = document.getElementById('instagram-link').href;
     const currentInstagramHandle = document.getElementById('instagram-handle').textContent;
+    const currentCoverImage = document.getElementById('header-image').src;
 
     // Actualizar los campos del formulario
     document.getElementById('site-name').value = currentSiteName === '[Nombre del sitio]' ? '' : currentSiteName;
@@ -101,14 +102,25 @@ function updateForm() {
     document.getElementById('shipping-info').value = currentShippingInfo === '[Información de envíos]' ? '' : currentShippingInfo;
     document.getElementById('instagram-url').value = currentInstagramUrl === '#' ? '' : currentInstagramUrl;
     document.getElementById('instagram-handle-text').value = currentInstagramHandle === '[Usuario de Instagram]' ? '' : currentInstagramHandle;
+    
+    // Limpiar el input de archivo y mostrar la imagen actual
+    document.getElementById('cover-image').value = '';
+    
+    // Mostrar la imagen de portada actual
+    const currentCoverImageElement = document.getElementById('current-cover-image');
+    if (currentCoverImage && !currentCoverImage.includes('[URL imagen de portada]')) {
+        currentCoverImageElement.src = currentCoverImage;
+        currentCoverImageElement.style.display = 'block';
+    } else {
+        currentCoverImageElement.style.display = 'none';
+    }
 }
 
 // Función para cargar la configuración del sitio
-async function loadSiteConfig() {
+// Función para actualizar la interfaz con la configuración del sitio
+function updateSiteConfigUI(config) {
     try {
-        const docSnap = await getDoc(siteConfigRef);
-        if (docSnap.exists()) {
-            const config = docSnap.data();
+        if (config) {
             const siteName = config.siteName || '[Nombre del sitio]';
 
             // Actualizar todas las instancias del nombre del sitio
@@ -131,9 +143,6 @@ async function loadSiteConfig() {
             if (config.adminPassword) {
                 adminModule.updatePassword(config.adminPassword);
             }
-
-            // Agregar evento para actualizar el formulario cuando se abre el modal
-            document.getElementById('btn-edit-site').addEventListener('click', updateForm);
         } else {
             // Si no existe configuración, mostrar placeholders
             const siteName = '[Nombre del sitio]';
@@ -154,6 +163,21 @@ async function loadSiteConfig() {
             document.getElementById('shipping-text').textContent = '[Información de envíos]';
             document.getElementById('instagram-link').href = '#';
             document.getElementById('instagram-handle').textContent = '[Usuario de Instagram]';
+        }
+    } catch (error) {
+        console.error('Error al actualizar la configuración en la interfaz:', error);
+    }
+}
+
+async function loadSiteConfig() {
+    try {
+        const docSnap = await getDoc(siteConfigRef);
+        if (docSnap.exists()) {
+            const config = docSnap.data();
+            updateSiteConfigUI(config);
+        } else {
+            // Si no existe configuración, mostrar placeholders
+            updateSiteConfigUI(null);
         }
     } catch (error) {
         console.error('Error al cargar la configuración:', error);
@@ -238,12 +262,15 @@ async function saveSiteConfig(event) {
             if (currentImage && !currentImage.includes('[URL imagen de portada]')) {
                 config.coverImage = currentImage;
             }
-        } await setDoc(siteConfigRef, config);
+        }        await setDoc(siteConfigRef, config);
         const modal = bootstrap.Modal.getInstance(document.getElementById('modalSiteConfig'));
+        
+        // Limpiar el formulario antes de cerrar el modal
+        document.getElementById('site-config-form').reset();
+        document.getElementById('current-cover-image').style.display = 'none';
+        
         modal.hide();
 
-        // Recargar la configuración del sitio inmediatamente
-        await loadSiteConfig();
         showToast('Configuración guardada correctamente', 'success');
     } catch (error) {
         console.error('Error al guardar la configuración:', error);
@@ -332,8 +359,8 @@ const adminModule = (() => {
     }
 
     async function login(pass) {
-        await initPassword(); // Asegurar que tenemos la contraseña más reciente
         try {
+            await initPassword(); // Asegurar que tenemos la contraseña más reciente
             const isMatch = await bcrypt.compare(pass, adminPassword);
             if (isMatch) {
                 isAdmin = true;
@@ -427,6 +454,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Event listener para el formulario de configuración
     document.getElementById('site-config-form').addEventListener('submit', saveSiteConfig);
 
+    // Event listener para el botón de editar configuración del sitio
+    document.getElementById('btn-edit-site').addEventListener('click', updateForm);
+
     // Manejar el evento de cierre de sesión
     document.getElementById('btn-logout').addEventListener('click', (e) => {
         e.preventDefault();
@@ -466,6 +496,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderProducts();
     });
 
+    // Listener para cambios en tiempo real de la configuración del sitio
+    onSnapshot(siteConfigRef, (docSnap) => {
+        if (docSnap.exists()) {
+            const config = docSnap.data();
+            console.log('Configuración actualizada en tiempo real:', config.siteName);
+            updateSiteConfigUI(config);
+        } else {
+            // Si no existe configuración, mostrar placeholders
+            console.log('No existe configuración, mostrando placeholders');
+            updateSiteConfigUI(null);
+        }
+    });
+
     // Asegurar que window.bootstrap esté disponible
     let bootstrapLib = window.bootstrap;
     if (!bootstrapLib) {
@@ -501,17 +544,36 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    document.getElementById('admin-login-form').addEventListener('submit', function (e) {
+    document.getElementById('admin-login-form').addEventListener('submit', async function (e) {
         e.preventDefault();
         const pass = document.getElementById('admin-pass').value;
-        if (adminModule.login(pass)) {
-            if (adminModal) adminModal.hide();
-            setTimeout(() => {
-                document.getElementById('btn-add-product').classList.remove('d-none');
-            }, 100);
-        } else {
+        
+        try {
+            const loginSuccess = await adminModule.login(pass);
+            if (loginSuccess) {
+                if (adminModal) adminModal.hide();
+                setTimeout(() => {
+                    document.getElementById('btn-add-product').classList.remove('d-none');
+                }, 100);
+            } else {
+                document.getElementById('admin-login-error').classList.remove('d-none');
+            }
+        } catch (error) {
+            console.error('Error durante el login:', error);
             document.getElementById('admin-login-error').classList.remove('d-none');
         }
+    });
+
+    // Limpiar el formulario y errores al cerrar el modal de login
+    document.getElementById('modalAdminLogin').addEventListener('hidden.bs.modal', function () {
+        document.getElementById('admin-pass').value = '';
+        document.getElementById('admin-login-error').classList.add('d-none');
+    });
+
+    // Limpiar el formulario al cerrar el modal de configuración del sitio
+    document.getElementById('modalSiteConfig').addEventListener('hidden.bs.modal', function () {
+        document.getElementById('site-config-form').reset();
+        document.getElementById('current-cover-image').style.display = 'none';
     });
 
     // Eliminar el login simple anterior (admin-login div)
@@ -605,9 +667,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.querySelector('.container').classList.remove('sidebar-open');
         });
     });
-
-    // Cargar configuración del sitio
-    loadSiteConfig();
 });
 
 // Función para mostrar la imagen en el slider
@@ -739,22 +798,59 @@ function renderProducts() {
         list.appendChild(col);
     });
 
-    // Agregar controles de paginación
+    // Agregar controles de paginación con límite de páginas mostradas
     const paginationContainer = document.createElement('div');
     paginationContainer.className = 'w-100 d-flex justify-content-center mt-4';
+    
+    // Configuración de paginación limitada
+    const maxVisiblePages = 3; // Número máximo de páginas numeradas a mostrar
+    
+    // Calcular el rango de páginas a mostrar
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+    
+    // Ajustar el inicio si estamos cerca del final
+    if (endPage - startPage + 1 < maxVisiblePages && totalPages >= maxVisiblePages) {
+        startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+    
+    // Generar las páginas numeradas
+    let pageNumbers = '';
+    for (let i = startPage; i <= endPage; i++) {
+        pageNumbers += `
+            <li class="page-item ${currentPage === i ? 'active' : ''}">
+                <button class="page-link" onclick="changePage(${i})">${i}</button>
+            </li>
+        `;
+    }
+    
     paginationContainer.innerHTML = `
         <nav aria-label="Navegación de páginas">
-            <ul class="pagination">
+            <ul class="pagination flex-wrap">
                 <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
-                    <button class="page-link" onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>Anterior</button>
+                    <button class="page-link" onclick="changePage(1)" ${currentPage === 1 ? 'disabled' : ''}>
+                        <span class="d-none d-md-inline">Primero</span>
+                        <span class="d-inline d-md-none">⏮</span>
+                    </button>
                 </li>
-                ${Array.from({ length: totalPages }, (_, i) => i + 1).map(page => `
-                    <li class="page-item ${currentPage === page ? 'active' : ''}">
-                        <button class="page-link" onclick="changePage(${page})">${page}</button>
-                    </li>
-                `).join('')}
+                <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                    <button class="page-link" onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>
+                        <span class="d-none d-md-inline">Anterior</span>
+                        <span class="d-inline d-md-none">◀</span>
+                    </button>
+                </li>
+                ${pageNumbers}
                 <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
-                    <button class="page-link" onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>Siguiente</button>
+                    <button class="page-link" onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>
+                        <span class="d-none d-md-inline">Siguiente</span>
+                        <span class="d-inline d-md-none">▶</span>
+                    </button>
+                </li>
+                <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                    <button class="page-link" onclick="changePage(${totalPages})" ${currentPage === totalPages ? 'disabled' : ''}>
+                        <span class="d-none d-md-inline">Último</span>
+                        <span class="d-inline d-md-none">⏭</span>
+                    </button>
                 </li>
             </ul>
         </nav>

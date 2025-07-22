@@ -406,6 +406,13 @@ section:nth-of-type(4) { animation-delay: 0.7s; }
     background-color: var(--sidebar-bg);
     border-color: var(--sidebar-accent);
     color: var(--text-main);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9rem;
+    min-width: 44px;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .pagination .page-item.active .page-link {
@@ -424,6 +431,44 @@ section:nth-of-type(4) { animation-delay: 0.7s; }
     background-color: var(--sidebar-bg);
     border-color: var(--sidebar-accent);
     color: #666;
+}
+
+/* Responsividad para la paginación */
+@media (max-width: 768px) {
+    .pagination .page-link {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.9rem;
+        min-width: 40px;
+    }
+    
+    .pagination {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.25rem;
+    }
+    
+    .pagination .page-item {
+        margin: 0.125rem;
+    }
+    
+    /* Los iconos en móviles deben ser más grandes y legibles */
+    .pagination .page-link .d-inline.d-md-none {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+}
+
+@media (max-width: 480px) {
+    .pagination .page-link {
+        padding: 0.35rem 0.5rem;
+        font-size: 0.85rem;
+        min-width: 36px;
+    }
+    
+    /* Los iconos en móviles pequeños */
+    .pagination .page-link .d-inline.d-md-none {
+        font-size: 1rem;
+    }
 }
 
 /* Estilos para el botón Volver Arriba */
