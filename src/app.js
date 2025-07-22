@@ -3,6 +3,176 @@ import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import bcrypt from 'bcryptjs';
 
+// Variables para el control del loader
+let isConfigLoaded = false;
+let isProductsLoaded = false;
+let pendingImages = 0;
+
+// Función para mostrar el loader
+function showLoader() {
+    const loader = document.getElementById('loader');
+    if (loader) {
+        loader.style.display = 'flex';
+        loader.classList.remove('fade-out');
+        disableScroll(); // Deshabilitar scroll cuando se muestra el loader
+    }
+}
+
+// Función para ocultar el loader
+function hideLoader() {
+    const loader = document.getElementById('loader');
+    if (loader) {
+        loader.classList.add('fade-out');
+        setTimeout(() => {
+            loader.style.display = 'none';
+            // Habilitar scroll solo si no hay otras pantallas activas
+            if (!shouldKeepScrollDisabled()) {
+                enableScroll();
+            }
+        }, 500); // Esperar a que termine la animación de fade-out
+    }
+}
+
+// Función para verificar si se puede ocultar el loader
+function checkIfCanHideLoader() {
+    if (isConfigLoaded && isProductsLoaded && pendingImages === 0 && ageVerified) {
+        console.log('✅ Todos los datos, imágenes y verificaciones han sido completados, ocultando loader');
+        hideLoader();
+    }
+}
+
+// Función para manejar la carga de imágenes
+function handleImageLoad() {
+    pendingImages--;
+    console.log(`📸 Imagen cargada. Imágenes pendientes: ${pendingImages}`);
+    checkIfCanHideLoader();
+}
+
+// Función para manejar el error de carga de imágenes
+function handleImageError() {
+    pendingImages--;
+    console.log(`❌ Error al cargar imagen. Imágenes pendientes: ${pendingImages}`);
+    checkIfCanHideLoader();
+}
+
+// Variables para el control de verificación de edad
+let ageVerificationRequired = false;
+let ageVerified = false;
+
+// Funciones para controlar el scroll de la página
+function disableScroll() {
+    document.body.classList.add('no-scroll');
+    console.log('🚫 Scroll deshabilitado');
+}
+
+function enableScroll() {
+    document.body.classList.remove('no-scroll');
+    console.log('✅ Scroll habilitado');
+}
+
+// Función para verificar si se debe mantener el scroll deshabilitado
+function shouldKeepScrollDisabled() {
+    const loader = document.getElementById('loader');
+    const ageVerification = document.getElementById('age-verification');
+    
+    // Mantener scroll deshabilitado si el loader está visible
+    if (loader && loader.style.display !== 'none' && !loader.classList.contains('fade-out')) {
+        return true;
+    }
+    
+    // Mantener scroll deshabilitado si la verificación de edad está visible
+    if (ageVerification && !ageVerification.classList.contains('d-none')) {
+        return true;
+    }
+    
+    return false;
+}
+
+// Función para mostrar la verificación de edad
+function showAgeVerification() {
+    const ageVerificationEl = document.getElementById('age-verification');
+    if (ageVerificationEl) {
+        ageVerificationEl.classList.remove('d-none');
+        disableScroll(); // Deshabilitar scroll cuando se muestra la verificación de edad
+        console.log('🔞 Mostrando verificación de edad');
+        
+        // Manejar la carga del logo de verificación de edad
+        const ageVerificationLogo = document.querySelector('.age-verification-logo');
+        if (ageVerificationLogo) {
+            pendingImages++;
+            console.log(`🔄 Cargando logo de verificación de edad. Imágenes pendientes: ${pendingImages}`);
+            
+            const handleAgeLogoLoad = () => {
+                handleImageLoad();
+                ageVerificationLogo.removeEventListener('load', handleAgeLogoLoad);
+                ageVerificationLogo.removeEventListener('error', handleAgeLogoError);
+            };
+            
+            const handleAgeLogoError = () => {
+                handleImageError();
+                ageVerificationLogo.removeEventListener('load', handleAgeLogoLoad);
+                ageVerificationLogo.removeEventListener('error', handleAgeLogoError);
+            };
+            
+            ageVerificationLogo.addEventListener('load', handleAgeLogoLoad);
+            ageVerificationLogo.addEventListener('error', handleAgeLogoError);
+            
+            if (ageVerificationLogo.complete) {
+                handleAgeLogoLoad();
+            }
+        }
+    }
+}
+
+// Función para ocultar la verificación de edad
+function hideAgeVerification() {
+    const ageVerificationEl = document.getElementById('age-verification');
+    if (ageVerificationEl) {
+        ageVerificationEl.classList.add('d-none');
+        // Habilitar scroll solo si no hay otras pantallas activas
+        if (!shouldKeepScrollDisabled()) {
+            enableScroll();
+        }
+        console.log('✅ Verificación de edad completada');
+    }
+}
+
+// Función para manejar la confirmación de edad
+function handleAgeConfirmation() {
+    ageVerified = true;
+    localStorage.setItem('ageVerified', 'true');
+    hideAgeVerification();
+    console.log('✅ Usuario confirmó ser mayor de edad');
+}
+
+// Función para manejar el rechazo de edad
+function handleAgeDeny() {
+    console.log('❌ Usuario declaró ser menor de edad');
+    // Redirigir a una página externa o mostrar mensaje
+    window.location.href = 'https://www.google.com';
+}
+
+// Función para verificar si se necesita verificación de edad
+function checkAgeVerification(config) {
+    if (config && config.ageVerificationEnabled) {
+        ageVerificationRequired = true;
+        const storedVerification = localStorage.getItem('ageVerified');
+        
+        if (storedVerification !== 'true') {
+            showAgeVerification();
+            return true; // Necesita verificación
+        } else {
+            ageVerified = true;
+            console.log('✅ Verificación de edad ya confirmada previamente');
+            return false; // Ya verificado
+        }
+    } else {
+        ageVerificationRequired = false;
+        ageVerified = true; // No se requiere verificación
+        return false;
+    }
+}
+
 // Función para verificar la conexión a Firebase
 async function checkFirebaseConnection() {
     const firebaseConfig = {
@@ -79,7 +249,7 @@ const db = getFirestore(app);
 const siteConfigRef = doc(db, 'config', 'site');
 
 // Función para actualizar el formulario con los valores actuales            
-function updateForm() {
+async function updateForm() {
     // Capturar los valores actuales o usar placeholders
     const currentSiteName = document.querySelector('.navbar-brand').textContent;
     const currentSlogan1 = document.getElementById('slogan1').textContent;
@@ -91,6 +261,16 @@ function updateForm() {
     const currentInstagramUrl = document.getElementById('instagram-link').href;
     const currentInstagramHandle = document.getElementById('instagram-handle').textContent;
     const currentCoverImage = document.getElementById('header-image').src;
+
+    // Obtener la configuración actual para el checkbox de verificación de edad
+    try {
+        const docSnap = await getDoc(siteConfigRef);
+        const currentConfig = docSnap.exists() ? docSnap.data() : {};
+        document.getElementById('age-verification-enabled').checked = currentConfig.ageVerificationEnabled || false;
+    } catch (error) {
+        console.error('Error al cargar configuración de verificación de edad:', error);
+        document.getElementById('age-verification-enabled').checked = false;
+    }
 
     // Actualizar los campos del formulario
     document.getElementById('site-name').value = currentSiteName === '[Nombre del sitio]' ? '' : currentSiteName;
@@ -129,8 +309,33 @@ function updateSiteConfigUI(config) {
             document.querySelector('#catalogo h2').textContent = `Catálogo ${siteName}`;
             document.querySelector('footer div').textContent = `© Sitio oficial de ${siteName}, desarrollado por Alejandro Javier Avila. Todos los derechos reservados.`;
 
+            // Configurar la imagen de portada con control de carga
+            const headerImage = document.getElementById('header-image');
+            const coverImageUrl = config.coverImage || 'https://placehold.co/600x400?text=Image+Not+Found';
+            
+            // Solo incrementar el contador si la imagen cambió
+            if (headerImage.src !== coverImageUrl) {
+                pendingImages++;
+                console.log(`🔄 Cargando imagen de portada. Imágenes pendientes: ${pendingImages}`);
+                
+                const handleHeaderImageLoad = () => {
+                    handleImageLoad();
+                    headerImage.removeEventListener('load', handleHeaderImageLoad);
+                    headerImage.removeEventListener('error', handleHeaderImageError);
+                };
+                
+                const handleHeaderImageError = () => {
+                    handleImageError();
+                    headerImage.removeEventListener('load', handleHeaderImageLoad);
+                    headerImage.removeEventListener('error', handleHeaderImageError);
+                };
+                
+                headerImage.addEventListener('load', handleHeaderImageLoad);
+                headerImage.addEventListener('error', handleHeaderImageError);
+                headerImage.src = coverImageUrl;
+            }
+
             // Resto de la configuración
-            document.getElementById('header-image').src = config.coverImage || '[URL imagen de portada]';
             document.getElementById('slogan1').textContent = config.slogan1 || '[Slogan principal]';
             document.getElementById('slogan2').textContent = config.slogan2 || '[Slogan secundario]';
             document.getElementById('about-content').textContent = config.aboutText || '[Texto Quiénes somos]';
@@ -143,6 +348,9 @@ function updateSiteConfigUI(config) {
             if (config.adminPassword) {
                 adminModule.updatePassword(config.adminPassword);
             }
+
+            // Verificar si se necesita verificación de edad
+            checkAgeVerification(config);
         } else {
             // Si no existe configuración, mostrar placeholders
             const siteName = '[Nombre del sitio]';
@@ -153,8 +361,32 @@ function updateSiteConfigUI(config) {
             document.querySelector('#catalogo h2').textContent = `Catálogo ${siteName}`;
             document.querySelector('footer div').textContent = `© 2025 Sitio oficial de ${siteName}, desarrollado por Alejandro Javier Avila. Todos los derechos reservados.`;
 
+            // Configurar imagen de portada placeholder
+            const headerImage = document.getElementById('header-image');
+            const placeholderUrl = 'https://placehold.co/600x400?text=Image+Not+Found';
+            
+            if (headerImage.src !== placeholderUrl) {
+                pendingImages++;
+                console.log(`🔄 Cargando imagen placeholder. Imágenes pendientes: ${pendingImages}`);
+                
+                const handlePlaceholderLoad = () => {
+                    handleImageLoad();
+                    headerImage.removeEventListener('load', handlePlaceholderLoad);
+                    headerImage.removeEventListener('error', handlePlaceholderError);
+                };
+                
+                const handlePlaceholderError = () => {
+                    handleImageError();
+                    headerImage.removeEventListener('load', handlePlaceholderLoad);
+                    headerImage.removeEventListener('error', handlePlaceholderError);
+                };
+                
+                headerImage.addEventListener('load', handlePlaceholderLoad);
+                headerImage.addEventListener('error', handlePlaceholderError);
+                headerImage.src = placeholderUrl;
+            }
+
             // Resto de placeholders
-            document.getElementById('header-image').src = '[URL imagen de portada]';
             document.getElementById('slogan1').textContent = '[Slogan principal]';
             document.getElementById('slogan2').textContent = '[Slogan secundario]';
             document.getElementById('about-content').textContent = '[Texto Quiénes somos]';
@@ -163,6 +395,9 @@ function updateSiteConfigUI(config) {
             document.getElementById('shipping-text').textContent = '[Información de envíos]';
             document.getElementById('instagram-link').href = '#';
             document.getElementById('instagram-handle').textContent = '[Usuario de Instagram]';
+
+            // No hay configuración, por lo tanto no se requiere verificación de edad
+            checkAgeVerification(null);
         }
     } catch (error) {
         console.error('Error al actualizar la configuración en la interfaz:', error);
@@ -171,6 +406,7 @@ function updateSiteConfigUI(config) {
 
 async function loadSiteConfig() {
     try {
+        console.log('🔄 Cargando configuración del sitio...');
         const docSnap = await getDoc(siteConfigRef);
         if (docSnap.exists()) {
             const config = docSnap.data();
@@ -179,8 +415,13 @@ async function loadSiteConfig() {
             // Si no existe configuración, mostrar placeholders
             updateSiteConfigUI(null);
         }
+        isConfigLoaded = true;
+        console.log('✅ Configuración del sitio cargada');
+        checkIfCanHideLoader();
     } catch (error) {
         console.error('Error al cargar la configuración:', error);
+        isConfigLoaded = true; // Marcar como cargado incluso si hay error para no bloquear
+        checkIfCanHideLoader();
     }
 }
 
@@ -238,6 +479,7 @@ async function saveSiteConfig(event) {
             shippingInfo: document.getElementById('shipping-info').value,
             instagramUrl: document.getElementById('instagram-url').value,
             instagramHandle: document.getElementById('instagram-handle-text').value,
+            ageVerificationEnabled: document.getElementById('age-verification-enabled').checked,
             adminPassword: currentConfig.adminPassword || import.meta.env.VITE_ADMIN_PASS // Preservar la contraseña existente
         };        if (imageFile) {
             // Si se seleccionó una nueva imagen, procesarla y actualizar
@@ -440,6 +682,45 @@ document.getElementById('btn-sort-price').addEventListener('click', () => {
 
 // Escuchar cambios en Firestore y actualizar la galería
 document.addEventListener('DOMContentLoaded', async () => {
+    // Mostrar el loader al inicio
+    showLoader();
+    console.log('🚀 Iniciando carga de la aplicación...');
+    
+    // Contar el logo del loader como imagen pendiente
+    const loaderLogo = document.querySelector('.loader-logo');
+    if (loaderLogo) {
+        pendingImages++;
+        console.log(`🔄 Cargando logo del loader. Imágenes pendientes: ${pendingImages}`);
+        
+        const handleLoaderLogoLoad = () => {
+            handleImageLoad();
+            loaderLogo.removeEventListener('load', handleLoaderLogoLoad);
+            loaderLogo.removeEventListener('error', handleLoaderLogoError);
+        };
+        
+        const handleLoaderLogoError = () => {
+            handleImageError();
+            loaderLogo.removeEventListener('load', handleLoaderLogoLoad);
+            loaderLogo.removeEventListener('error', handleLoaderLogoError);
+        };
+        
+        loaderLogo.addEventListener('load', handleLoaderLogoLoad);
+        loaderLogo.addEventListener('error', handleLoaderLogoError);
+        
+        // Si el logo ya está cargado (desde caché)
+        if (loaderLogo.complete) {
+            handleLoaderLogoLoad();
+        }
+    }
+    
+    // Timeout de seguridad para ocultar el loader después de 10 segundos
+    setTimeout(() => {
+        if (document.getElementById('loader').style.display !== 'none') {
+            console.log('⏰ Timeout de loader alcanzado, ocultando por seguridad');
+            hideLoader();
+        }
+    }, 10000);
+    
     // Cargar la configuración del sitio
     await loadSiteConfig();
 
@@ -456,6 +737,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Event listener para el botón de editar configuración del sitio
     document.getElementById('btn-edit-site').addEventListener('click', updateForm);
+
+    // Event listeners para verificación de edad
+    document.getElementById('btn-age-confirm').addEventListener('click', handleAgeConfirmation);
+    document.getElementById('btn-age-deny').addEventListener('click', handleAgeDeny);
 
     // Manejar el evento de cierre de sesión
     document.getElementById('btn-logout').addEventListener('click', (e) => {
@@ -486,6 +771,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const productosCol = collection(db, 'productos');
     onSnapshot(productosCol, (snapshot) => {
+        console.log('🔄 Cargando productos...');
         products = [];
         snapshot.forEach(docSnap => {
             const data = docSnap.data();
@@ -494,18 +780,32 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Aplicar el ordenamiento actual
         sortProductsByPrice();
         renderProducts();
+        
+        // Marcar productos como cargados solo en la primera carga
+        if (!isProductsLoaded) {
+            isProductsLoaded = true;
+            console.log('✅ Productos cargados');
+            checkIfCanHideLoader();
+        }
     });
 
     // Listener para cambios en tiempo real de la configuración del sitio
     onSnapshot(siteConfigRef, (docSnap) => {
         if (docSnap.exists()) {
             const config = docSnap.data();
-            console.log('Configuración actualizada en tiempo real:', config.siteName);
+            console.log('🔄 Configuración actualizada en tiempo real:', config.siteName);
             updateSiteConfigUI(config);
         } else {
             // Si no existe configuración, mostrar placeholders
-            console.log('No existe configuración, mostrando placeholders');
+            console.log('⚠️ No existe configuración, mostrando placeholders');
             updateSiteConfigUI(null);
+        }
+        
+        // Solo marcar como cargado si es la primera vez
+        if (!isConfigLoaded) {
+            isConfigLoaded = true;
+            console.log('✅ Configuración del sitio cargada (tiempo real)');
+            checkIfCanHideLoader();
         }
     });
 
@@ -763,6 +1063,8 @@ function renderProducts() {
 
     if (products.length === 0) {
         list.innerHTML = '<p class="text-center text-secondary">No hay productos en el catálogo.</p>';
+        // Si no hay productos, no hay imágenes que cargar
+        checkIfCanHideLoader();
         return;
     }
 
@@ -773,6 +1075,10 @@ function renderProducts() {
     const paginatedProducts = products.slice(startIndex, endIndex);
 
     const isAdmin = adminModule.isAdmin && adminModule.isAdmin();
+
+    // Contar las imágenes que se van a cargar
+    pendingImages = paginatedProducts.length;
+    console.log(`🔄 Iniciando carga de ${pendingImages} imágenes de productos`);
 
     // Renderizar productos
     paginatedProducts.forEach((product) => {
@@ -791,9 +1097,18 @@ function renderProducts() {
         </div>
         `;
 
-        // Agregar evento click a la imagen
+        // Agregar evento click a la imagen y eventos de carga
         const img = col.querySelector('.card-img-top');
         img.addEventListener('click', () => showImageSlider(product));
+        
+        // Agregar eventos para controlar la carga de imágenes
+        img.addEventListener('load', handleImageLoad);
+        img.addEventListener('error', handleImageError);
+        
+        // Si la imagen ya está cargada (desde caché), decrementar el contador
+        if (img.complete) {
+            handleImageLoad();
+        }
 
         list.appendChild(col);
     });
@@ -1003,6 +1318,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log('🚀 La aplicación está lista y conectada a Firebase');
     } else {
         console.error('❌ Hay problemas con la conexión a Firebase');
+        // Ocultar el loader en caso de error de conexión
+        hideLoader();
         // Mostrar mensaje de error en la UI
         const errorDiv = document.createElement('div');
         errorDiv.className = 'alert alert-danger fixed-top m-3';

@@ -12,6 +12,145 @@
     --button-hover: #ff1744;
     --info-bg: #ffb6e6;
 }
+
+/* Loader Styles */
+.loader-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--main-bg);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    opacity: 1;
+    transition: opacity 0.5s ease-out;
+}
+
+.loader-overlay.fade-out {
+    opacity: 0;
+}
+
+.loader-content {
+    text-align: center;
+    color: var(--text-main);
+}
+
+.logo-container {
+    position: relative;
+    display: inline-block;
+    margin-bottom: 1rem;
+}
+
+.loader-logo {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 3px solid var(--text-accent);
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.logo-container .spinner-border {
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    width: 100px !important;
+    height: 100px !important;
+    border-width: 3px;
+    color: var(--text-accent);
+    animation: spin 1s linear infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.05);
+        opacity: 0.8;
+    }
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.loader-content p {
+    font-size: 1.1rem;
+    margin-top: 1rem;
+    color: var(--text-accent);
+}
+
+/* Age Verification Styles */
+.age-verification-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(24, 20, 28, 0.98);
+    backdrop-filter: blur(10px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    padding: 1rem;
+}
+
+.age-verification-content {
+    max-width: 500px;
+    width: 100%;
+    animation: fadeInUp 0.5s ease-out;
+}
+
+.age-verification-logo {
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 3px solid var(--text-accent);
+}
+
+.border-pink {
+    border-color: var(--text-accent) !important;
+    border-width: 2px !important;
+}
+
+.btn-pink {
+    background-color: var(--button-bg);
+    border-color: var(--button-bg);
+    color: white;
+    transition: all 0.3s ease;
+}
+
+.btn-pink:hover {
+    background-color: var(--button-hover);
+    border-color: var(--button-hover);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(230, 0, 122, 0.3);
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 body, .modal-content {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: var(--main-bg) !important;
@@ -20,6 +159,25 @@ body, .modal-content {
     padding: 0;
     min-height: 100vh;
 }
+
+/* Clase para deshabilitar scroll cuando loader o verificación están activos */
+body.no-scroll {
+    overflow: hidden !important;
+    height: 100vh;
+    position: fixed;
+    width: 100%;
+}
+
+/* Asegurar que los overlays tengan la posición correcta */
+.loader-overlay,
+.age-verification-overlay {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+}
+
 main.container {
     margin-top: 32px;
     margin-bottom: 32px;

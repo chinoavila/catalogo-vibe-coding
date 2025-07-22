@@ -38,3 +38,9 @@ docker-compose.override.yml
 
 # Archivos de documentacion
 docs/
+
+# Excluir archivos de imagen
+*.jpg
+*.png
+*.gif
+*.ico

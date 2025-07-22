@@ -5,12 +5,54 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>[Nombre del sitio] | Catálogo de Productos</title>
+  <!-- Favicon -->
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
   <!-- Plantilla gratuita: Bootstrap 5 -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="src/styles.css">
 </head>
 
 <body class="bg-dark text-light pt-5 pb-5 mb-4">
+  <!-- Loader -->
+  <div id="loader" class="loader-overlay">
+    <div class="loader-content">
+      <div class="logo-container">
+        <img src="logo.png" alt="Logo" class="loader-logo">
+        <div class="spinner-border text-light" role="status">
+          <span class="visually-hidden">Cargando...</span>
+        </div>
+      </div>
+      <p class="mt-3 mb-0">Cargando catálogo...</p>
+    </div>
+  </div>
+
+  <!-- Pantalla de Confirmación de Edad -->
+  <div id="age-verification" class="age-verification-overlay d-none">
+    <div class="age-verification-content">
+      <div class="text-center mb-4">
+        <img src="logo.png" alt="Logo" class="age-verification-logo mb-3">
+        <h2 class="fw-bold text-light">Verificación de Edad</h2>
+      </div>
+      <div class="card bg-dark border-pink">
+        <div class="card-body text-center">
+          <p class="card-text fs-5 mb-4 text-light">
+            Debes tener 18+ años para acceder a nuestro sitio.
+            </br></br>
+            Si decides continuar, estarás confirmando que tienes la edad legal requerida en tu jurisdicción.
+          </p>
+          <div class="d-grid gap-3 d-md-flex justify-content-md-center">
+            <button id="btn-age-confirm" class="btn btn-pink btn-lg px-5">
+              Tengo 18+
+            </button>
+            <button id="btn-age-deny" class="btn btn-outline-light btn-lg px-5">
+              Quiero irme
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <nav class="navbar navbar-expand-lg navbar-dark bg-gradient bg-black fixed-top">
     <div class="container-fluid">
       <a class="navbar-brand fw-bold" href="#portada">[Nombre del sitio]</a>
@@ -189,6 +231,18 @@
               <div class="col-md-6 mb-3">
                 <label for="instagram-handle-text" class="form-label">Usuario de Instagram</label>
                 <input type="text" class="form-control" id="instagram-handle-text" required>
+              </div>
+              <div class="col-12 mb-3">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="age-verification-enabled">
+                  <label class="form-check-label" for="age-verification-enabled">
+                    <strong>Activar verificación de edad</strong>
+                  </label>
+                  <div class="form-text text-light">
+                    Si está activado, se mostrará una pantalla de confirmación de edad antes de acceder al contenido del sitio. 
+                    Útil para sitios con contenido para adultos.
+                  </div>
+                </div>
               </div>
             </div>
           </div>
