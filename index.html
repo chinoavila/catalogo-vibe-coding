@@ -113,6 +113,22 @@
         <button id="btn-add-product" class="btn btn-pink d-none" data-bs-toggle="modal"
           data-bs-target="#modalProduct">Agregar Producto</button>
       </div>
+      <!-- Buscador de productos -->
+      <div class="mb-4">
+        <div class="input-group">
+          <input type="text" 
+                 id="search-input" 
+                 class="form-control" 
+                 placeholder="Buscar productos por nombre..." 
+                 aria-label="Buscar productos">
+          <button class="btn btn-outline-light" type="button" id="btn-clear-search">
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+              <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/>
+            </svg>
+          </button>
+        </div>
+        <div id="search-results-info" class="mt-2 text-muted small"></div>
+      </div>
       <div id="product-list" class="row g-4 w-100 mx-0"></div>
       <div id="admin-login" class="mt-4"></div>
     </section>

@@ -13,6 +13,11 @@ let pendingImages = 0;
 let products = [];
 let categories = [];
 let currentCategoryFilter = null; // null = ver todos, string = id de categoría
+let currentSearchFilter = ''; // String para búsqueda por nombre
+
+// Variables para elementos del DOM del buscador
+let searchInput;
+let searchResultsInfo;
 
 // Función para mostrar el loader
 function showLoader() {
@@ -794,6 +799,29 @@ function sortProductsByPrice() {
     sortIcon.textContent = sortDirection === 'asc' ? '↑' : '↓';
 }
 
+// Funciones para el buscador de productos
+function performSearch() {
+    if (!searchInput) return;
+    currentSearchFilter = searchInput.value.trim().toLowerCase();
+    currentPage = 1; // Resetear a la primera página
+    renderProducts();
+}
+
+function updateSearchInfo() {
+    if (!searchResultsInfo) return;
+    
+    const filteredProducts = getFilteredProducts();
+    const totalProducts = currentCategoryFilter ? 
+        products.filter(p => p.categoryId === currentCategoryFilter).length : 
+        products.length;
+    
+    if (currentSearchFilter) {
+        searchResultsInfo.textContent = `Se encontraron ${filteredProducts.length} productos de ${totalProducts} para "${currentSearchFilter}"`;
+    } else {
+        searchResultsInfo.textContent = '';
+    }
+}
+
 // Event listener para el botón de ordenamiento
 document.getElementById('btn-sort-price').addEventListener('click', () => {
     sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
@@ -923,6 +951,27 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.log('🎯 Formulario de producto abierto desde pantalla de categorías');
         }
     });
+
+    // Inicializar elementos del DOM del buscador
+    searchInput = document.getElementById('search-input');
+    const btnClearSearch = document.getElementById('btn-clear-search');
+    searchResultsInfo = document.getElementById('search-results-info');
+
+    // Event listener para búsqueda en tiempo real
+    if (searchInput) {
+        searchInput.addEventListener('input', performSearch);
+    }
+
+    // Event listener para limpiar búsqueda
+    if (btnClearSearch) {
+        btnClearSearch.addEventListener('click', () => {
+            searchInput.value = '';
+            currentSearchFilter = '';
+            currentPage = 1;
+            renderProducts();
+            searchInput.focus();
+        });
+    }
 
     // Manejar el evento de cierre de sesión
     document.getElementById('btn-logout').addEventListener('click', (e) => {
@@ -1304,7 +1353,22 @@ function renderProducts() {
     const filteredProducts = getFilteredProducts();
 
     if (filteredProducts.length === 0) {
-        list.innerHTML = '<p class="text-center text-secondary">No hay productos en esta categoría.</p>';
+        let message = 'No hay productos';
+        if (currentSearchFilter && currentCategoryFilter) {
+            message = `No se encontraron productos que contengan "${currentSearchFilter}" en esta categoría.`;
+        } else if (currentSearchFilter) {
+            message = `No se encontraron productos que contengan "${currentSearchFilter}".`;
+        } else if (currentCategoryFilter) {
+            message = 'No hay productos en esta categoría.';
+        } else {
+            message = 'No hay productos disponibles.';
+        }
+        
+        list.innerHTML = `<p class="text-center text-secondary">${message}</p>`;
+        
+        // Actualizar información de búsqueda
+        updateSearchInfo();
+        
         // Si no hay productos, no hay imágenes que cargar
         checkIfCanHideLoader();
         return;
@@ -1413,6 +1477,9 @@ function renderProducts() {
         </nav>
     `;
     list.appendChild(paginationContainer);
+    
+    // Actualizar información de búsqueda
+    updateSearchInfo();
 }
 
 // Función para cambiar de página
@@ -1428,7 +1495,15 @@ function showCategoriesView() {
     document.getElementById('categorias').classList.remove('d-none');
     document.getElementById('catalogo').classList.add('d-none');
     currentCategoryFilter = null;
+    currentSearchFilter = '';
     document.getElementById('current-category-name').textContent = '';
+    
+    // Limpiar campo de búsqueda
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) {
+        searchInput.value = '';
+    }
+    
     renderCategories();
 }
 
@@ -1438,15 +1513,34 @@ function showCatalogView(categoryId = null, categoryName = 'Todos los productos'
     currentCategoryFilter = categoryId;
     document.getElementById('current-category-name').textContent = categoryName;
     currentPage = 1; // Resetear a la primera página
+    
+    // Limpiar búsqueda al cambiar de categoría
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) {
+        searchInput.value = '';
+        currentSearchFilter = '';
+    }
+    
     renderProducts();
 }
 
-// Función para obtener productos filtrados por categoría
+// Función para obtener productos filtrados por categoría y búsqueda
 function getFilteredProducts() {
-    if (!currentCategoryFilter) {
-        return products;
+    let filteredProducts = products;
+    
+    // Filtrar por categoría si está seleccionada
+    if (currentCategoryFilter) {
+        filteredProducts = filteredProducts.filter(product => product.categoryId === currentCategoryFilter);
     }
-    return products.filter(product => product.categoryId === currentCategoryFilter);
+    
+    // Filtrar por búsqueda si hay texto de búsqueda
+    if (currentSearchFilter) {
+        filteredProducts = filteredProducts.filter(product => 
+            product.description.toLowerCase().includes(currentSearchFilter)
+        );
+    }
+    
+    return filteredProducts;
 }
 
 // Función para renderizar categorías

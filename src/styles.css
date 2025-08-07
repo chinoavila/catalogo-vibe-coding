@@ -770,6 +770,43 @@ section:nth-of-type(4) { animation-delay: 0.7s; }
     opacity: 0.9;
 }
 
+/* Estilos para el buscador de productos */
+#search-input {
+    background-color: var(--sidebar-bg);
+    border: 1px solid var(--sidebar-accent);
+    color: var(--text-main);
+}
+
+#search-input:focus {
+    background-color: var(--sidebar-bg);
+    border-color: var(--button-hover);
+    color: var(--text-main);
+    box-shadow: 0 0 0 0.2rem rgba(230, 0, 122, 0.25);
+}
+
+#search-input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+#btn-clear-search {
+    background-color: var(--sidebar-bg);
+    border: 1px solid var(--sidebar-accent);
+    border-left: none;
+    color: var(--text-main);
+    transition: all 0.2s ease;
+}
+
+#btn-clear-search:hover {
+    background-color: var(--button-hover);
+    border-color: var(--button-hover);
+    color: #fff;
+}
+
+#search-results-info {
+    color: var(--text-accent);
+    font-style: italic;
+}
+
 /* Estilos para las tarjetas de categorías */
 .category-card {
     background: var(--sidebar-bg) !important;
