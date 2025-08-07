@@ -6,7 +6,13 @@ import bcrypt from 'bcryptjs';
 // Variables para el control del loader
 let isConfigLoaded = false;
 let isProductsLoaded = false;
+let isCategoriesLoaded = false;
 let pendingImages = 0;
+
+// Variables para productos y categorías
+let products = [];
+let categories = [];
+let currentCategoryFilter = null; // null = ver todos, string = id de categoría
 
 // Función para mostrar el loader
 function showLoader() {
@@ -35,7 +41,7 @@ function hideLoader() {
 
 // Función para verificar si se puede ocultar el loader
 function checkIfCanHideLoader() {
-    if (isConfigLoaded && isProductsLoaded && pendingImages === 0 && ageVerified) {
+    if (isConfigLoaded && isProductsLoaded && isCategoriesLoaded && pendingImages === 0 && ageVerified) {
         console.log('✅ Todos los datos, imágenes y verificaciones han sido completados, ocultando loader');
         hideLoader();
     }
@@ -484,18 +490,27 @@ async function saveSiteConfig(event) {
         };        if (imageFile) {
             // Si se seleccionó una nueva imagen, procesarla y actualizar
             try {
+                console.log('📷 Subiendo imagen de portada:', imageFile.name);
                 const timestamp = Date.now();
                 const fileName = `${timestamp}_${imageFile.name}`;
                 const storageRef = ref(storage, `sitio/${fileName}`);
                 
+                console.log('📤 Subiendo a:', `sitio/${fileName}`);
                 // Subir la imagen
                 await uploadBytes(storageRef, imageFile);
+                console.log('✅ Imagen de portada subida exitosamente');
                 
                 // Obtener la URL de descarga
                 const downloadURL = await getDownloadURL(storageRef);
+                console.log('🔗 URL de portada obtenida:', downloadURL);
                 config.coverImage = downloadURL;
             } catch (error) {
-                console.error("Error guardando la imagen de portada:", error);
+                console.error("❌ Error guardando la imagen de portada:", error);
+                console.error("Error details:", {
+                    code: error.code,
+                    message: error.message,
+                    customData: error.customData
+                });
                 throw error;
             }
         } else {
@@ -510,6 +525,7 @@ async function saveSiteConfig(event) {
         // Limpiar el formulario antes de cerrar el modal
         document.getElementById('site-config-form').reset();
         document.getElementById('current-cover-image').style.display = 'none';
+        clearImagePreviews();
         
         modal.hide();
 
@@ -520,28 +536,49 @@ async function saveSiteConfig(event) {
     }
 }
 
-let products = [];
 const PRODUCTS_PER_PAGE = 6; // Número de productos por página
 let currentPage = 1; // Página actual
 
 // Inicializar Firebase Storage
 const storage = getStorage(app);
 
+// Función de diagnóstico para Firebase Storage y Firestore
+function checkFirebaseConfig() {
+    console.log('🔧 Verificando configuración de Firebase...');
+    console.log('API Key:', import.meta.env.VITE_API_KEY ? '✅ Configurado' : '❌ Faltante');
+    console.log('Auth Domain:', import.meta.env.VITE_AUTH_DOMAIN ? '✅ Configurado' : '❌ Faltante');
+    console.log('Project ID:', import.meta.env.VITE_PROJECT_ID ? '✅ Configurado' : '❌ Faltante');
+    console.log('Storage Bucket:', import.meta.env.VITE_STORAGE_BUCKET ? '✅ Configurado' : '❌ Faltante');
+    console.log('Messaging Sender ID:', import.meta.env.VITE_MESSAGING_SENDER_ID ? '✅ Configurado' : '❌ Faltante');
+    console.log('App ID:', import.meta.env.VITE_APP_ID ? '✅ Configurado' : '❌ Faltante');
+    console.log('Firebase Storage inicializado:', storage ? '✅ OK' : '❌ Error');
+    console.log('Firebase Firestore inicializado:', db ? '✅ OK' : '❌ Error');
+}
+
 // Función para guardar imagen en Firebase Storage
 async function saveImage(imageFile) {
     try {
+        console.log('📷 Iniciando subida de imagen:', imageFile.name);
         const timestamp = Date.now();
         const fileName = `${timestamp}_${imageFile.name}`;
         const storageRef = ref(storage, `productos/${fileName}`);
 
+        console.log('📤 Subiendo archivo a:', `productos/${fileName}`);
         // Subir la imagen
         await uploadBytes(storageRef, imageFile);
+        console.log('✅ Archivo subido exitosamente');
 
         // Obtener la URL de descarga
         const downloadURL = await getDownloadURL(storageRef);
+        console.log('🔗 URL obtenida:', downloadURL);
         return downloadURL;
     } catch (error) {
-        console.error("Error guardando la imagen:", error);
+        console.error("❌ Error guardando la imagen:", error);
+        console.error("Error details:", {
+            code: error.code,
+            message: error.message,
+            customData: error.customData
+        });
         throw error;
     }
 }
@@ -608,12 +645,15 @@ const adminModule = (() => {
                 isAdmin = true;
                 localStorage.setItem('isAdmin', 'true');
                 document.getElementById('btn-add-product').classList.remove('d-none');
+                document.getElementById('btn-add-category').classList.remove('d-none');
+                document.getElementById('btn-add-product-categories').classList.remove('d-none');
                 document.getElementById('btn-edit-site').classList.remove('d-none');
                 document.getElementById('logout-container').style.display = 'block';
                 document.getElementById('change-password-container').style.display = 'block';
                 document.getElementById('btn-admin').style.display = 'none';
                 showToast('Credenciales correctas: se habilitó el modo administrador.', 'success');
                 renderProducts();
+                renderCategories();
                 return true;
             } else {
                 showToast('Credenciales incorrectas.', 'error');
@@ -630,10 +670,18 @@ const adminModule = (() => {
         isAdmin = false;
         localStorage.removeItem('isAdmin');
         document.getElementById('btn-add-product').classList.add('d-none');
+        document.getElementById('btn-add-category').classList.add('d-none');
+        document.getElementById('btn-add-product-categories').classList.add('d-none');
         document.getElementById('btn-edit-site').classList.add('d-none');
         document.getElementById('change-password-container').style.display = 'none';
         document.getElementById('btn-admin').style.display = '';
         renderProducts();
+        renderCategories();
+    }
+
+    function restoreAdminSession() {
+        isAdmin = true;
+        return true;
     }
 
     async function addProduct(productosCol, data) {
@@ -641,7 +689,18 @@ const adminModule = (() => {
             showToast('Acceso restringido.', 'error');
             return;
         }
-        await addDoc(productosCol, data);
+        try {
+            console.log('📝 Agregando producto:', data);
+            await addDoc(productosCol, data);
+            console.log('✅ Producto agregado exitosamente');
+        } catch (error) {
+            console.error('❌ Error agregando producto:', error);
+            console.error('Error details:', {
+                code: error.code,
+                message: error.message
+            });
+            throw error;
+        }
     }
 
     async function deleteProduct(productosCol, id) {
@@ -649,12 +708,73 @@ const adminModule = (() => {
             showToast('Acceso restringido.', 'error');
             return;
         }
-        await deleteDoc(doc(productosCol, id));
-    } function isAdminCheck() {
+        try {
+            console.log('🗑️ Eliminando producto:', id);
+            await deleteDoc(doc(productosCol, id));
+            console.log('✅ Producto eliminado exitosamente');
+        } catch (error) {
+            console.error('❌ Error eliminando producto:', error);
+            console.error('Error details:', {
+                code: error.code,
+                message: error.message
+            });
+            throw error;
+        }
+    }
+
+    async function addCategory(categoriasCol, data) {
+        if (!isAdmin) {
+            showToast('Acceso restringido.', 'error');
+            return;
+        }
+        try {
+            console.log('📝 Agregando categoría:', data);
+            await addDoc(categoriasCol, data);
+            console.log('✅ Categoría agregada exitosamente');
+        } catch (error) {
+            console.error('❌ Error agregando categoría:', error);
+            console.error('Error details:', {
+                code: error.code,
+                message: error.message
+            });
+            throw error;
+        }
+    }
+
+    async function deleteCategory(categoriasCol, id) {
+        if (!isAdmin) {
+            showToast('Acceso restringido.', 'error');
+            return;
+        }
+        try {
+            console.log('🗑️ Eliminando categoría:', id);
+            await deleteDoc(doc(categoriasCol, id));
+            console.log('✅ Categoría eliminada exitosamente');
+        } catch (error) {
+            console.error('❌ Error eliminando categoría:', error);
+            console.error('Error details:', {
+                code: error.code,
+                message: error.message
+            });
+            throw error;
+        }
+    }
+
+    function isAdminCheck() {
         return isAdmin;
     }
 
-    return { login, logout, addProduct, deleteProduct, isAdmin: isAdminCheck, updatePassword };
+    return { 
+        login, 
+        logout, 
+        addProduct, 
+        deleteProduct, 
+        addCategory, 
+        deleteCategory, 
+        isAdmin: isAdminCheck, 
+        updatePassword,
+        restoreAdminSession 
+    };
 })();
 // --- Fin módulo administración ---
 
@@ -685,6 +805,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Mostrar el loader al inicio
     showLoader();
     console.log('🚀 Iniciando carga de la aplicación...');
+    
+    // Verificar configuración de Firebase
+    checkFirebaseConfig();
     
     // Contar el logo del loader como imagen pendiente
     const loaderLogo = document.querySelector('.loader-logo');
@@ -726,9 +849,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Verificar si hay una sesión de administrador activa
     if (localStorage.getItem('isAdmin') === 'true') {
+        // Actualizar el estado interno del módulo de administración
+        adminModule.restoreAdminSession();
         document.getElementById('btn-add-product').classList.remove('d-none');
+        document.getElementById('btn-add-category').classList.remove('d-none');
+        document.getElementById('btn-add-product-categories').classList.remove('d-none');
         document.getElementById('btn-edit-site').classList.remove('d-none');
         document.getElementById('logout-container').style.display = 'block';
+        document.getElementById('change-password-container').style.display = 'block';
         document.getElementById('btn-admin').style.display = 'none';
     }
 
@@ -741,6 +869,60 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Event listeners para verificación de edad
     document.getElementById('btn-age-confirm').addEventListener('click', handleAgeConfirmation);
     document.getElementById('btn-age-deny').addEventListener('click', handleAgeDeny);
+
+    // Event listeners para navegación entre categorías y catálogo
+    document.getElementById('btn-back-categories').addEventListener('click', showCategoriesView);
+
+    // Event listeners para formularios
+    document.getElementById('category-form').addEventListener('submit', saveCategoryForm);
+    
+    // Event listeners para vista previa de imágenes
+    setupImagePreviews();
+    
+    // Event listener para limpiar formulario de categoría al abrirlo
+    document.getElementById('btn-add-category').addEventListener('click', () => {
+        document.getElementById('modalCategoryLabel').textContent = 'Agregar Categoría';
+        document.getElementById('category-id').value = '';
+        document.getElementById('category-name').value = '';
+    });
+
+    // Event listener para limpiar formulario de producto al abrirlo
+    document.getElementById('btn-add-product').addEventListener('click', () => {
+        document.getElementById('modalProductLabel').textContent = 'Agregar Producto';
+        document.getElementById('product-id').value = '';
+        document.getElementById('description').value = '';
+        document.getElementById('price').value = '';
+        document.getElementById('image').value = '';
+        document.getElementById('current-image').style.display = 'none';
+        clearImagePreviews();
+        
+        // Preseleccionar la categoría actual si no estamos viendo "Todos los productos"
+        const categorySelect = document.getElementById('product-category');
+        if (currentCategoryFilter && categorySelect) {
+            categorySelect.value = currentCategoryFilter;
+            console.log('🎯 Categoría preseleccionada:', currentCategoryFilter);
+        } else {
+            categorySelect.value = '';
+        }
+    });
+
+    // Event listener para el botón de agregar producto en la pantalla de categorías
+    document.getElementById('btn-add-product-categories').addEventListener('click', () => {
+        document.getElementById('modalProductLabel').textContent = 'Agregar Producto';
+        document.getElementById('product-id').value = '';
+        document.getElementById('description').value = '';
+        document.getElementById('price').value = '';
+        document.getElementById('image').value = '';
+        document.getElementById('current-image').style.display = 'none';
+        clearImagePreviews();
+        
+        // Desde la pantalla de categorías, no hay categoría preseleccionada por defecto
+        const categorySelect = document.getElementById('product-category');
+        if (categorySelect) {
+            categorySelect.value = '';
+            console.log('🎯 Formulario de producto abierto desde pantalla de categorías');
+        }
+    });
 
     // Manejar el evento de cierre de sesión
     document.getElementById('btn-logout').addEventListener('click', (e) => {
@@ -779,12 +961,45 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
         // Aplicar el ordenamiento actual
         sortProductsByPrice();
-        renderProducts();
+        
+        // Solo renderizar productos si estamos en la vista de catálogo
+        if (document.getElementById('catalogo').classList.contains('d-none') === false) {
+            renderProducts();
+        }
         
         // Marcar productos como cargados solo en la primera carga
         if (!isProductsLoaded) {
             isProductsLoaded = true;
             console.log('✅ Productos cargados');
+            checkIfCanHideLoader();
+        }
+    });
+
+    // Listener para cambios en tiempo real de las categorías
+    const categoriasCol = collection(db, 'categorias');
+    onSnapshot(categoriasCol, (snapshot) => {
+        console.log('🔄 Cargando categorías...');
+        categories = [];
+        snapshot.forEach(docSnap => {
+            const data = docSnap.data();
+            categories.push({ ...data, _id: docSnap.id });
+        });
+        
+        // Ordenar categorías alfabéticamente
+        categories.sort((a, b) => a.name.localeCompare(b.name));
+        
+        // Solo renderizar categorías si estamos en la vista de categorías
+        if (document.getElementById('categorias').classList.contains('d-none') === false) {
+            renderCategories();
+        }
+        
+        // Actualizar el select de categorías en el formulario de productos
+        updateCategorySelect();
+        
+        // Marcar categorías como cargadas solo en la primera carga
+        if (!isCategoriesLoaded) {
+            isCategoriesLoaded = true;
+            console.log('✅ Categorías cargadas');
             checkIfCanHideLoader();
         }
     });
@@ -874,27 +1089,50 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('modalSiteConfig').addEventListener('hidden.bs.modal', function () {
         document.getElementById('site-config-form').reset();
         document.getElementById('current-cover-image').style.display = 'none';
+        clearImagePreviews();
+    });
+
+    // Limpiar el formulario al cerrar el modal de productos
+    document.getElementById('modalProduct').addEventListener('hidden.bs.modal', function () {
+        document.getElementById('current-image').style.display = 'none';
+        clearImagePreviews();
     });
 
     // Eliminar el login simple anterior (admin-login div)
     const oldLoginDiv = document.getElementById('admin-login');
-    if (oldLoginDiv) oldLoginDiv.innerHTML = ''; document.getElementById('btn-add-product').addEventListener('click', () => {
+    if (oldLoginDiv) oldLoginDiv.innerHTML = '';
+    
+    // Event listener duplicado - limpiar formulario de producto al abrirlo (versión adicional)
+    document.getElementById('btn-add-product').addEventListener('click', () => {
         document.getElementById('modalProductLabel').textContent = 'Agregar Producto';
         document.getElementById('product-id').value = '';
         document.getElementById('description').value = '';
         document.getElementById('price').value = '';
         document.getElementById('image').value = '';
         document.getElementById('current-image').style.display = 'none';
-    }); document.getElementById('product-form').addEventListener('submit', async function (e) {
+        clearImagePreviews();
+        
+        // Preseleccionar la categoría actual si no estamos viendo "Todos los productos"
+        const categorySelect = document.getElementById('product-category');
+        if (currentCategoryFilter && categorySelect) {
+            categorySelect.value = currentCategoryFilter;
+            console.log('🎯 Categoría preseleccionada (evento duplicado):', currentCategoryFilter);
+        } else {
+            categorySelect.value = '';
+        }
+    });
+    
+    document.getElementById('product-form').addEventListener('submit', async function (e) {
         e.preventDefault();
         const id = document.getElementById('product-id').value;
         const description = document.getElementById('description').value.trim();
+        const categoryId = document.getElementById('product-category').value;
         const price = parseFloat(document.getElementById('price').value);
         const imageFile = document.getElementById('image').files[0];
 
         // Validar campos requeridos
-        if (!description || isNaN(price)) {
-            showToast('Por favor completa la descripción y el precio', 'error');
+        if (!description || !categoryId || isNaN(price)) {
+            showToast('Por favor completa todos los campos requeridos', 'error');
             return;
         }
 
@@ -908,6 +1146,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const productosCol = collection(db, 'productos');
             const productData = {
                 description,
+                categoryId,
                 price: price.toFixed(2)
             };
 
@@ -945,6 +1184,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Cerrar el modal y limpiar el formulario
             const modal = bootstrap.Modal.getInstance(document.getElementById('modalProduct'));
             document.getElementById('current-image').style.display = 'none';
+            clearImagePreviews();
             if (modal) modal.hide();
             this.reset();
         } catch (error) {
@@ -1061,8 +1301,10 @@ function renderProducts() {
     const list = document.getElementById('product-list');
     list.innerHTML = '';
 
-    if (products.length === 0) {
-        list.innerHTML = '<p class="text-center text-secondary">No hay productos en el catálogo.</p>';
+    const filteredProducts = getFilteredProducts();
+
+    if (filteredProducts.length === 0) {
+        list.innerHTML = '<p class="text-center text-secondary">No hay productos en esta categoría.</p>';
         // Si no hay productos, no hay imágenes que cargar
         checkIfCanHideLoader();
         return;
@@ -1071,10 +1313,10 @@ function renderProducts() {
     // Calcular paginación
     const startIndex = (currentPage - 1) * PRODUCTS_PER_PAGE;
     const endIndex = startIndex + PRODUCTS_PER_PAGE;
-    const totalPages = Math.ceil(products.length / PRODUCTS_PER_PAGE);
-    const paginatedProducts = products.slice(startIndex, endIndex);
+    const totalPages = Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE);
+    const paginatedProducts = filteredProducts.slice(startIndex, endIndex);
 
-    const isAdmin = adminModule.isAdmin && adminModule.isAdmin();
+    const isAdmin = adminModule.isAdmin();
 
     // Contar las imágenes que se van a cargar
     pendingImages = paginatedProducts.length;
@@ -1175,11 +1417,298 @@ function renderProducts() {
 
 // Función para cambiar de página
 window.changePage = function (newPage) {
-    if (newPage >= 1 && newPage <= Math.ceil(products.length / PRODUCTS_PER_PAGE)) {
+    if (newPage >= 1 && newPage <= Math.ceil(getFilteredProducts().length / PRODUCTS_PER_PAGE)) {
         currentPage = newPage;
         renderProducts();
     }
 }
+
+// Funciones para navegación entre vistas
+function showCategoriesView() {
+    document.getElementById('categorias').classList.remove('d-none');
+    document.getElementById('catalogo').classList.add('d-none');
+    currentCategoryFilter = null;
+    document.getElementById('current-category-name').textContent = '';
+    renderCategories();
+}
+
+function showCatalogView(categoryId = null, categoryName = 'Todos los productos') {
+    document.getElementById('categorias').classList.add('d-none');
+    document.getElementById('catalogo').classList.remove('d-none');
+    currentCategoryFilter = categoryId;
+    document.getElementById('current-category-name').textContent = categoryName;
+    currentPage = 1; // Resetear a la primera página
+    renderProducts();
+}
+
+// Función para obtener productos filtrados por categoría
+function getFilteredProducts() {
+    if (!currentCategoryFilter) {
+        return products;
+    }
+    return products.filter(product => product.categoryId === currentCategoryFilter);
+}
+
+// Función para renderizar categorías
+function renderCategories() {
+    const list = document.getElementById('category-list');
+    list.innerHTML = '';
+
+    // Crear la tarjeta "Ver Todos" siempre al inicio
+    const viewAllCol = document.createElement('div');
+    viewAllCol.className = 'col-12 col-md-6 col-lg-4';
+    
+    viewAllCol.innerHTML = `
+        <div class="card category-card h-100 d-flex flex-column justify-content-center" style="cursor: pointer;">
+            <div class="card-body text-center">
+                <h5 class="card-title">Ver Todos</h5>
+                <p class="card-text">Mostrar todos los productos disponibles</p>
+            </div>
+        </div>
+    `;
+
+    // Agregar evento click a la tarjeta "Ver Todos"
+    viewAllCol.addEventListener('click', () => showCatalogView(null, 'Todos los productos'));
+
+    list.appendChild(viewAllCol);
+
+    if (categories.length === 0) {
+        const noCategories = document.createElement('div');
+        noCategories.className = 'col-12 text-center text-secondary mt-4';
+        noCategories.innerHTML = '<p>No hay categorías disponibles. El administrador puede agregar categorías.</p>';
+        list.appendChild(noCategories);
+        // Si no hay categorías, verificar si se puede ocultar el loader
+        checkIfCanHideLoader();
+        return;
+    }
+
+    const isAdmin = adminModule.isAdmin();
+
+    // Renderizar categorías sin imágenes
+    categories.forEach((category) => {
+        const col = document.createElement('div');
+        col.className = 'col-12 col-md-6 col-lg-4';
+        
+        col.innerHTML = `
+            <div class="card category-card h-100 d-flex flex-column justify-content-center" style="cursor: pointer;">
+                <div class="card-body text-center">
+                    <h5 class="card-title">${category.name}</h5>
+                </div>
+                ${isAdmin ? `<div class='card-footer bg-transparent border-0 d-flex gap-2'>
+                    <button class='btn btn-pink flex-fill' onclick="window.editCategory('${category._id}')">Editar</button>
+                    <button class='btn btn-danger flex-fill' onclick="window.deleteCategory('${category._id}')">Eliminar</button>
+                </div>` : ''}
+            </div>
+        `;
+
+        // Agregar evento click a la tarjeta para navegar al catálogo
+        col.addEventListener('click', (e) => {
+            // Evitar navegación si se hace click en los botones de administración
+            if (!e.target.closest('button')) {
+                showCatalogView(category._id, category.name);
+            }
+        });
+
+        list.appendChild(col);
+    });
+}
+
+// Función para configurar las vistas previas de imágenes
+function setupImagePreviews() {
+    // Vista previa para imagen de producto
+    const productImageInput = document.getElementById('image');
+    const previewImage = document.getElementById('preview-image');
+    const currentImage = document.getElementById('current-image');
+
+    if (productImageInput && previewImage) {
+        productImageInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                console.log('📷 Mostrando vista previa de imagen de producto:', file.name);
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    previewImage.src = e.target.result;
+                    previewImage.style.display = 'block';
+                    // Ocultar imagen actual cuando hay vista previa
+                    if (currentImage) {
+                        currentImage.style.display = 'none';
+                    }
+                };
+                reader.readAsDataURL(file);
+            } else {
+                // Si no hay archivo, ocultar vista previa y mostrar imagen actual si existe
+                previewImage.style.display = 'none';
+                if (currentImage && currentImage.src) {
+                    currentImage.style.display = 'block';
+                }
+            }
+        });
+    }
+
+    // Vista previa para imagen de portada
+    const coverImageInput = document.getElementById('cover-image');
+    const previewCoverImage = document.getElementById('preview-cover-image');
+    const currentCoverImage = document.getElementById('current-cover-image');
+
+    if (coverImageInput && previewCoverImage) {
+        coverImageInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                console.log('📷 Mostrando vista previa de imagen de portada:', file.name);
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    previewCoverImage.src = e.target.result;
+                    previewCoverImage.style.display = 'block';
+                    // Ocultar imagen actual cuando hay vista previa
+                    if (currentCoverImage) {
+                        currentCoverImage.style.display = 'none';
+                    }
+                };
+                reader.readAsDataURL(file);
+            } else {
+                // Si no hay archivo, ocultar vista previa y mostrar imagen actual si existe
+                previewCoverImage.style.display = 'none';
+                if (currentCoverImage && currentCoverImage.src) {
+                    currentCoverImage.style.display = 'block';
+                }
+            }
+        });
+    }
+}
+
+// Función para limpiar vistas previas cuando se resetean los formularios
+function clearImagePreviews() {
+    const previewImage = document.getElementById('preview-image');
+    const previewCoverImage = document.getElementById('preview-cover-image');
+    
+    if (previewImage) {
+        previewImage.style.display = 'none';
+        previewImage.src = '';
+    }
+    
+    if (previewCoverImage) {
+        previewCoverImage.style.display = 'none';
+        previewCoverImage.src = '';
+    }
+}
+function updateCategorySelect() {
+    const select = document.getElementById('product-category');
+    if (!select) return;
+
+    // Limpiar opciones existentes excepto la primera
+    select.innerHTML = '<option value="">Selecciona una categoría</option>';
+
+    // Agregar las categorías disponibles
+    categories.forEach(category => {
+        const option = document.createElement('option');
+        option.value = category._id;
+        option.textContent = category.name;
+        select.appendChild(option);
+    });
+}
+
+// Función para manejar el formulario de categorías
+async function saveCategoryForm(e) {
+    e.preventDefault();
+    const id = document.getElementById('category-id').value;
+    const name = document.getElementById('category-name').value.trim();
+
+    // Validar campos requeridos
+    if (!name) {
+        showToast('Por favor completa el nombre de la categoría', 'error');
+        return;
+    }
+
+    try {
+        const categoriasCol = collection(db, 'categorias');
+        const categoryData = {
+            name
+        };
+
+        if (id) {
+            // Editar categoría
+            if (!adminModule.isAdmin()) {
+                showToast('Acceso restringido.', 'error');
+                return;
+            }
+
+            await updateCategory(categoriasCol, id, categoryData);
+            showToast('Categoría actualizada correctamente', 'success');
+        } else {
+            // Agregar categoría
+            await adminModule.addCategory(categoriasCol, categoryData);
+            showToast('Categoría agregada correctamente', 'success');
+        }
+
+        // Cerrar el modal y limpiar el formulario
+        const modal = bootstrap.Modal.getInstance(document.getElementById('modalCategory'));
+        if (modal) modal.hide();
+        document.getElementById('category-form').reset();
+    } catch (error) {
+        console.error('Error al procesar la categoría:', error);
+        showToast('Error al guardar la categoría. Por favor intenta nuevamente.', 'error');
+    }
+}
+
+
+// Funciones para editar y eliminar categorías
+window.editCategory = function (id) {
+    const category = categories.find(c => c._id === id);
+    if (!category) return;
+    
+    document.getElementById('modalCategoryLabel').textContent = 'Editar Categoría';
+    document.getElementById('category-id').value = category._id;
+    document.getElementById('category-name').value = category.name;
+
+    const modal = new bootstrap.Modal(document.getElementById('modalCategory'));
+    modal.show();
+}
+
+window.deleteCategory = async function (id) {
+    if (!adminModule.isAdmin()) {
+        showToast('Acceso restringido.', 'error');
+        return;
+    }
+
+    if (!confirm('¿Estás seguro de que deseas eliminar esta categoría? Los productos asociados quedarán sin categoría.')) {
+        return;
+    }
+
+    try {
+        const categoriasCol = collection(db, 'categorias');
+
+        await adminModule.deleteCategory(categoriasCol, id);
+        showToast('Categoría eliminada correctamente', 'success');
+    } catch (error) {
+        console.error('Error al eliminar la categoría:', error);
+        showToast('Error al eliminar la categoría', 'error');
+    }
+}
+
+// Función para actualizar categoría
+async function updateCategory(categoriasCol, id, data) {
+    if (!adminModule.isAdmin()) {
+        showToast('Acceso restringido.', 'error');
+        return;
+    }
+    try {
+        console.log('✏️ Actualizando categoría:', id, data);
+        const ref = doc(categoriasCol, id);
+        await updateDoc(ref, data);
+        console.log('✅ Categoría actualizada exitosamente');
+    } catch (error) {
+        console.error('❌ Error actualizando categoría:', error);
+        console.error('Error details:', {
+            code: error.code,
+            message: error.message
+        });
+        throw error;
+    }
+}
+
+
+
+
 
 // Modal para agregar/editar producto
 window.editProduct = function (id) {
@@ -1188,6 +1717,7 @@ window.editProduct = function (id) {
     document.getElementById('modalProductLabel').textContent = 'Editar Producto';
     document.getElementById('product-id').value = product._id;
     document.getElementById('description').value = product.description;
+    document.getElementById('product-category').value = product.categoryId || '';
     document.getElementById('price').value = product.price;
     document.getElementById('image').value = ''; // Limpiar el input de archivo
 
@@ -1209,8 +1739,19 @@ window.updateProduct = async function (productosCol, id, data) {
         showToast('Acceso restringido.', 'error');
         return;
     }
-    const ref = doc(productosCol, id);
-    await updateDoc(ref, data);
+    try {
+        console.log('✏️ Actualizando producto:', id, data);
+        const ref = doc(productosCol, id);
+        await updateDoc(ref, data);
+        console.log('✅ Producto actualizado exitosamente');
+    } catch (error) {
+        console.error('❌ Error actualizando producto:', error);
+        console.error('Error details:', {
+            code: error.code,
+            message: error.message
+        });
+        throw error;
+    }
 }
 
 window.deleteProduct = async function (id) {
@@ -1331,3 +1872,31 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.body.appendChild(errorDiv);
     }
 });
+
+// Debug temporal - eliminar después
+setTimeout(() => {
+    console.log('=== DEBUG ADMIN STATE ===');
+    console.log('localStorage isAdmin:', localStorage.getItem('isAdmin'));
+    console.log('adminModule exists:', typeof adminModule !== 'undefined');
+    if (typeof adminModule !== 'undefined') {
+        console.log('adminModule.isAdmin():', adminModule.isAdmin());
+    }
+
+    // Verificar botones
+    const btnAddProduct = document.getElementById('btn-add-product');
+    const btnAddCategory = document.getElementById('btn-add-category');
+    const btnAddProductCategories = document.getElementById('btn-add-product-categories');
+    console.log('btn-add-product exists:', !!btnAddProduct);
+    console.log('btn-add-product visible:', btnAddProduct && !btnAddProduct.classList.contains('d-none'));
+    console.log('btn-add-category exists:', !!btnAddCategory);
+    console.log('btn-add-category visible:', btnAddCategory && !btnAddCategory.classList.contains('d-none'));
+    console.log('btn-add-product-categories exists:', !!btnAddProductCategories);
+    console.log('btn-add-product-categories visible:', btnAddProductCategories && !btnAddProductCategories.classList.contains('d-none'));
+
+    // Verificar formularios
+    const categoryForm = document.getElementById('category-form');
+    const productForm = document.getElementById('product-form');
+    console.log('category-form exists:', !!categoryForm);
+    console.log('product-form exists:', !!productForm);
+    console.log('=== END DEBUG ===');
+}, 3000);

@@ -770,6 +770,95 @@ section:nth-of-type(4) { animation-delay: 0.7s; }
     opacity: 0.9;
 }
 
+/* Estilos para las tarjetas de categorías */
+.category-card {
+    background: var(--sidebar-bg) !important;
+    border: 1px solid var(--sidebar-accent);
+    color: var(--text-main);
+    border-radius: 1rem;
+    box-shadow: 0 2px 8px 0 rgba(230,0,122,0.10);
+    padding: 0;
+    margin-bottom: 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: stretch;
+    transition: box-shadow 0.2s, transform 0.2s;
+    opacity: 1;
+    transform: none;
+    min-height: 200px;
+    width: 100%;
+    max-width: 100%;
+    cursor: pointer;
+}
+
+.category-card:hover {
+    box-shadow: 0 4px 16px 0 rgba(230,0,122,0.20);
+    transform: translateY(-2px);
+}
+
+.category-card .card-body {
+    padding: 2rem 1.2rem;
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+.category-card .card-title {
+    font-size: 1.5rem;
+    color: var(--text-accent);
+    margin-bottom: 0.75rem;
+    font-weight: bold;
+}
+
+.category-card .card-text {
+    font-size: 1rem;
+    color: var(--text-main);
+    margin-bottom: 0.5rem;
+}
+
+.category-card .card-footer {
+    background: transparent !important;
+    border-top: 1px solid var(--sidebar-accent) !important;
+    text-align: center;
+    padding: 0.75rem 1.2rem 0.75rem 1.2rem;
+}
+
+@media (max-width: 900px) {
+    .category-card {
+        min-height: 180px;
+    }
+    .category-card .card-title {
+        font-size: 1.3rem;
+    }
+}
+
+@media (max-width: 600px) {
+    .category-card {
+        min-height: 160px;
+    }
+    .category-card .card-title {
+        font-size: 1.2rem;
+    }
+    .category-card .card-body {
+        padding: 1.5rem 1rem;
+    }
+}
+
+/* Hacer que las imágenes del catálogo sean clickeables */
+.product-card .card-img-top {
+    cursor: pointer;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.product-card .card-img-top:hover {
+    transform: scale(1.02);
+    opacity: 0.9;
+}
+
 /* Estilos para los botones de navegación del slider */
 .slider-nav {
     position: absolute;
@@ -843,5 +932,211 @@ section:nth-of-type(4) { animation-delay: 0.7s; }
         width: 20px;
         height: 20px;
     }
+    
+    /* Optimización de modales en móviles */
+    .modal-dialog {
+        margin: 0.5rem;
+        max-height: calc(100vh - 1rem);
+        max-width: calc(100% - 1rem);
+        height: auto;
+        min-height: auto;
+    }
+    
+    .modal-content {
+        height: auto; /* Se ajusta al contenido en móviles también */
+        min-height: auto;
+    }
+    
+    .modal-body {
+        max-height: calc(100vh - 131px); /* 55px header + 65px footer + 11px margins */
+        padding: 1rem;
+        height: auto; /* Se ajusta al contenido */
+        min-height: auto;
+        flex: 0 1 auto; /* Mantener comportamiento adaptativo */
+    }
+    
+    .modal-header {
+        height: 55px;
+        min-height: 55px;
+        max-height: 55px; /* Forzar tamaño exacto en móviles */
+        padding: 0.75rem 1rem;
+    }
+    
+    .modal-footer {
+        height: 65px;
+        min-height: 65px;
+        max-height: 65px; /* Forzar tamaño exacto en móviles */
+        padding: 0.75rem 1rem;
+    }
+    
+    /* Ajustar modal de imagen en móviles */
+    #modalImageSlider .modal-dialog {
+        max-height: 100vh;
+        margin: 0;
+        max-width: 100%;
+    }
+}
+
+/* Mejoras adicionales para modales adaptativos */
+.modal-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 1rem 1.5rem;
+    flex-shrink: 0; /* Tamaño fijo */
+    flex-grow: 0;   /* No crecer */
+    height: 60px;
+    min-height: 60px;
+    max-height: 60px; /* Forzar tamaño exacto */
+    display: flex;
+    align-items: center;
+}
+
+.modal-footer {
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 1rem 1.5rem;
+    flex-shrink: 0; /* Tamaño fijo */
+    flex-grow: 0;   /* No crecer */
+    height: 70px;
+    min-height: 70px;
+    max-height: 70px; /* Forzar tamaño exacto */
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+/* Asegurar que el form no interfiera con el layout */
+.modal-content form {
+    display: flex;
+    flex-direction: column;
+    flex: 1; /* Ocupa el espacio disponible en modal-content */
+    height: auto;
+    min-height: auto;
+}
+
+/* Ajuste específico para cuando el modal-body está dentro de un form */
+.modal-content form .modal-body {
+    flex: 0 1 auto; /* Se ajusta al contenido, no crece innecesariamente */
+    overflow-y: auto;
+    height: auto;
+    min-height: auto;
+}
+
+/* Ajuste específico para cuando el modal-footer está dentro de un form */
+.modal-content form .modal-footer {
+    flex-shrink: 0; /* Mantener tamaño fijo */
+    flex-grow: 0;   /* No crecer */
+}
+
+/* Mejorar el scroll en modales largos */
+.modal-body::-webkit-scrollbar {
+    width: 6px;
+}
+
+.modal-body::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+    background: var(--button-bg);
+    border-radius: 3px;
+}
+
+.modal-body::-webkit-scrollbar-thumb:hover {
+    background: var(--button-hover-bg);
+}
+
+/* Transiciones suaves para modales */
+.modal.fade .modal-dialog {
+    transition: transform 0.3s ease-out;
+    transform: translate(0, -50px);
+}
+
+.modal.show .modal-dialog {
+    transform: none;
+}
+
+/* Estilos para vistas previas de imágenes */
+#preview-image, #preview-cover-image {
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(230, 0, 122, 0.3);
+    transition: all 0.3s ease;
+}
+
+#preview-image:hover, #preview-cover-image:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(230, 0, 122, 0.4);
+}
+
+/* Contenedor para las imágenes en formularios */
+.image-preview-container {
+    position: relative;
+}
+
+.image-preview-label {
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    background: var(--button-bg);
+    color: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+/* Optimización de modales para adaptarse al contenido */
+.modal-dialog {
+    margin: 1rem auto;
+    max-height: calc(100vh - 2rem);
+    /* Mantener flexbox para footer fijo, pero permitir height auto */
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    min-height: auto;
+}
+
+.modal-content {
+    max-height: calc(100vh - 2rem);
+    display: flex;
+    flex-direction: column;
+    height: auto; /* Se ajusta al contenido */
+    min-height: auto;
+    flex: 1;
+}
+
+.modal-body {
+    max-height: calc(100vh - 130px); /* 60px header + 70px footer */
+    overflow-y: auto;
+    padding: 1.5rem;
+    /* Permitir que se ajuste al contenido pero con límites */
+    flex: 0 1 auto; /* No crece, pero puede reducirse, tamaño automático */
+    height: auto;
+    min-height: auto;
+}
+
+/* Ajustes específicos para modales pequeños */
+#modalCategory .modal-dialog,
+#modalAdminLogin .modal-dialog,
+#modalChangePassword .modal-dialog {
+    max-width: 500px;
+}
+
+/* Ajustes para modal de productos */
+#modalProduct .modal-dialog {
+    max-width: 600px;
+}
+
+/* El modal de configuración ya tiene modal-lg de Bootstrap */
+#modalSiteConfig .modal-body {
+    max-height: calc(100vh - 150px);
+    overflow-y: auto;
+}
+
+/* Modal de imagen slider - comportamiento especial centrado */
+#modalImageSlider .modal-dialog {
+    max-height: 95vh;
+    max-width: 95vw;
+    width: auto;
+    margin: 2.5vh auto;
 }
 

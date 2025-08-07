@@ -194,7 +194,7 @@ La aplicación estará disponible en `http://localhost:5173`
 - Nunca compartir el archivo `.env` con credenciales
 - Mantener segura la contraseña de administrador
 - La configuración de Docker puede contener información sensible
-- Los volúmenes de Docker `vite_node_modules` y `express_node_modules` mantienen las dependencias
+- El volúmen de Docker `node_modules` mantiene las dependencias
 
 ### Assets y Archivos Estáticos
 
