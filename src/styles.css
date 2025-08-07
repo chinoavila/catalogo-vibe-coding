@@ -744,10 +744,23 @@ section:nth-of-type(4) { animation-delay: 0.7s; }
     border-radius: 0 0 0.5rem 0.5rem;
     transform: translateY(100%);
     transition: transform 0.3s ease;
+    z-index: 5;
 }
 
-.image-slider:hover .product-details {
+/* Mostrar detalles al hacer hover sobre el slider, pero no si están bloqueados */
+.image-slider:hover .product-details:not(.details-locked) {
     transform: translateY(0);
+}
+
+/* Clase para mantener los detalles visibles cuando sea necesario */
+.product-details.details-visible {
+    transform: translateY(0);
+}
+
+/* Los botones de navegación tienen z-index más alto para estar por encima */
+.slider-nav {
+    pointer-events: auto;
+    z-index: 15;
 }
 
 .product-title {
@@ -913,6 +926,7 @@ section:nth-of-type(4) { animation-delay: 0.7s; }
     cursor: pointer;
     transition: all 0.3s ease;
     backdrop-filter: blur(5px);
+    z-index: 15; /* Asegurar que estén por encima de otros elementos */
 }
 
 .slider-nav:hover {
@@ -970,7 +984,95 @@ section:nth-of-type(4) { animation-delay: 0.7s; }
         height: 20px;
     }
     
-    /* Optimización de modales en móviles */
+    /* Ajustar comportamiento de la descripción en móviles */
+    .product-details {
+        position: relative !important;
+        transform: none !important;
+        background: rgba(0,0,0,0.9);
+        border-radius: 0;
+        padding: 1rem;
+        margin-top: 0.5rem;
+    }
+    
+    /* En móviles, siempre mostrar la descripción debajo de la imagen */
+    .image-slider:hover .product-details:not(.details-locked),
+    .product-details.details-visible {
+        transform: none !important;
+    }
+    
+    /* Ajustar el contenedor del slider para móviles */
+    .image-slider {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .image-slider img {
+        max-height: 60vh;
+        width: auto;
+        object-fit: contain;
+    }
+    
+    /* Ajustar el modal body para móviles */
+    #modalImageSlider .modal-body {
+        padding: 0.5rem;
+        max-height: calc(100vh - 100px);
+        overflow-y: auto;
+    }
+    
+    /* Asegurar que el modal de imagen use toda la pantalla en móviles */
+    #modalImageSlider .modal-dialog {
+        max-height: 100vh;
+        margin: 0;
+        max-width: 100%;
+        height: 100vh;
+    }
+    
+    #modalImageSlider .modal-content {
+        height: 100vh;
+        border-radius: 0;
+    }
+}
+
+/* Para pantallas muy pequeñas */
+@media (max-width: 480px) {
+    .product-details {
+        padding: 0.75rem;
+        font-size: 0.9rem;
+    }
+    
+    .product-title {
+        font-size: 1.1rem !important;
+    }
+    
+    .product-price {
+        font-size: 1rem !important;
+    }
+    
+    .slider-nav {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .prev-btn {
+        left: 5px;
+    }
+    
+    .next-btn {
+        right: 5px;
+    }
+    
+    .slider-nav svg {
+        width: 18px;
+        height: 18px;
+    }
+    
+    .image-slider img {
+        max-height: 50vh;
+    }
+}
+
+/* Optimización adicional para evitar el overlap en cualquier pantalla */
+@media (max-width: 768px) {
     .modal-dialog {
         margin: 0.5rem;
         max-height: calc(100vh - 1rem);
@@ -1004,13 +1106,6 @@ section:nth-of-type(4) { animation-delay: 0.7s; }
         min-height: 65px;
         max-height: 65px; /* Forzar tamaño exacto en móviles */
         padding: 0.75rem 1rem;
-    }
-    
-    /* Ajustar modal de imagen en móviles */
-    #modalImageSlider .modal-dialog {
-        max-height: 100vh;
-        margin: 0;
-        max-width: 100%;
     }
 }
 

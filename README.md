@@ -1,205 +1,466 @@
-# Catálogo de Productos con Vibe Coding
+# 🛍️ Catálogo de Productos Vibe Coding
 
-Aplicación web para gestionar un catálogo de productos con interfaz de administración, desarrollada con Vibe Coding.
+Aplicación web para gestionar un catálogo de productos con interfaz de administración, integrada a Firebase y desarrollada con Vibe Coding.
 
-## Tecnologías Utilizadas
+## ✨ Características Principales
+
+- 📱 **Responsive Design**: Interfaz adaptativa que funciona en todos los dispositivos
+- 🔒 **Panel de Administración**: Gestión segura protegida con contraseña encriptada
+- 🗃️ **Gestión de Productos**: Agregar, editar y eliminar productos en tiempo real
+- ⚙️ **Configuración del Sitio**: Personalización completa de textos, imágenes y enlaces
+- 🖼️ **Gestión de Imágenes**: Subida y almacenamiento de imágenes en Firebase Storage
+- 🔄 **Base de Datos en Tiempo Real**: Sincronización automática con Firebase Firestore
+- 🎂 **Verificación de Edad**: Sistema de confirmación de edad configurable
+- ⚡ **Carga Rápida**: Optimizado con Vite para desarrollo y producción
+
+## 🛠️ Tecnologías Utilizadas
 
 - **Frontend:**
-  - Vite + JavaScript
-  - Bootstrap 5
-  - Firebase Web SDK
-  - bcryptjs para encriptación
+  - ⚡ JavaScript + Vite
+  - 🎨 Bootstrap 5 para UI/UX
+  - 🔥 Firebase Web SDK v11
+  - 🔐 bcryptjs para encriptación de contraseñas
 
 - **Backend:**
-  - Express.js (servidor para manejo de imágenes)
-  - Firebase Cloud Firestore
+  - 🔥 Firebase Cloud Firestore (Base de datos)
+  - 📁 Firebase Storage (Almacenamiento de archivos)
 
-## Características
+- **DevOps:**
+  - 🐳 Docker & Docker Compose
+  - 📦 Node.js 20 Alpine
 
-- Visualización de productos en formato de catálogo
-- Panel de administración protegido con contraseña
-- Gestión de productos (agregar, editar, eliminar)
-- Gestión de configuración del sitio
-- Almacenamiento de imágenes local
-- Base de datos en tiempo real con Firebase
+## ⚙️ Configuración de Firebase
 
-## Configuración de Firebase
+### 1. 🚀 Crear Proyecto en Firebase
 
-1. Crear un proyecto en Firebase:
-   - Ir a [Firebase Console](https://console.firebase.google.com/)
-   - Crear nuevo proyecto
-   - Habilitar Cloud Firestore
-   - Habilitar Firebase Storage
+1. Ve a [Firebase Console](https://console.firebase.google.com/)
+2. Haz clic en "Agregar proyecto"
+3. Ingresa el nombre del proyecto y sigue los pasos
+4. Habilita Google Analytics (opcional)
 
-2. Configurar Cloud Firestore:
-   - En la consola de Firebase, ir a "Firestore Database"
-   - Crear base de datos en modo de prueba
-   - Crear las siguientes colecciones:
-     ```
-     config/
-       └─ site/  # Documento para configuración del sitio
-          ├─ siteName: string
-          ├─ slogan1: string
-          ├─ slogan2: string
-          ├─ aboutText: string
-          ├─ contactText: string
-          ├─ schedule: string
-          ├─ shippingInfo: string
-          ├─ instagramUrl: string
-          ├─ instagramHandle: string
-          ├─ coverImage: string
-          └─ adminPassword: string (hash bcrypt)
+### 2. 🗄️ Configurar Cloud Firestore
 
-     productos/  # Colección de productos
-       └─ [auto-id]/  # Documentos generados automáticamente
-          ├─ description: string
-          ├─ price: string
-          └─ image: string
-     ```
-***Nota:*** la webapp debería crear automáticamente las colecciones necesarias.
+1. En la consola de Firebase, ve a **"Firestore Database"**
+2. Haz clic en **"Crear base de datos"**
+3. Selecciona el modo de inicio:
+   - **Modo de prueba** para desarrollo
+   - **Modo de producción** para mayor seguridad
+4. Elige la ubicación (recomendado: la más cercana a tus usuarios)
 
-3. Configurar Firebase Storage:
-   - En la consola de Firebase, ir a "Storage"
-   - Hacer clic en "Comenzar"
-   - Seleccionar el modo de seguridad:
-     - Elegir "Comenzar en modo de prueba" para desarrollo
-     - O "Comenzar en modo de producción" para mayor seguridad
-   - Seleccionar la ubicación del Storage (recomendado: la misma región que Firestore)
-   - Hacer clic en "Listo"
-   
-   **Estructura de carpetas recomendada en Storage:**
-   ```
-   gs://tu-proyecto.appspot.com/
-   ├── productos/          # Imágenes de productos subidas por el admin
-   │   ├── producto1.jpg
-   │   ├── producto2.png
-   │   └── ...
-   └── sitio/             # Imágenes de estructura del sitio subidas por el admin
-       ├── portada.jpg
-       └── ...
-   ```
-   
-   **Configuración inicial:**
-   - Las carpetas se crearán automáticamente cuando subas el primer archivo
-   - No es necesario crear las carpetas manualmente
-   - El sistema de administración del catálogo creará automáticamente la estructura necesaria
+**📂 Estructura de Colecciones:**
+```
+📁 config/
+  └── 📄 site/                      # Configuración general del sitio
+      ├── siteName: string          # Nombre del sitio
+      ├── slogan1: string           # Eslogan principal
+      ├── slogan2: string           # Eslogan secundario
+      ├── aboutText: string         # Texto de "Acerca de"
+      ├── contactText: string       # Información de contacto
+      ├── schedule: string          # Horarios de atención
+      ├── shippingInfo: string      # Información de envíos
+      ├── instagramUrl: string      # URL completa de Instagram
+      ├── instagramHandle: string   # @usuario de Instagram
+      ├── coverImage: string        # URL de imagen de portada
+      └── adminPassword: string     # Contraseña hasheada con bcrypt
 
-4. Configurar las reglas de seguridad en Firestore:
-   ```javascript
-    rules_version = '2';
+📁 categorias/                      # Categorías de productos
+  └── 📄 [auto-id]/                 # ID generado automáticamente
+      └── name: string              # Nombre de la categoría
 
-    service cloud.firestore {
-      match /databases/{database}/documents {
-          // Permitir lectura a todos
-          match /{document=**} {
-            allow read: if true;
-          }
-          
-          // Permitir escritura solo si está autenticado como admin
-          match /productos/{productId} {
-            allow write: if request.auth != null;
-          }
-          
-          match /config/{configId} {
-            allow write: if request.auth != null;
-          }
-      }
+📁 productos/                       # Catálogo de productos
+  └── 📄 [auto-id]/                 # ID generado automáticamente
+      ├── description: string       # Descripción del producto
+      ├── price: string             # Precio del producto
+      ├── categoryId: string        # ID de la categoría (opcional)
+      └── image: string             # URL de la imagen en Storage
+```
+
+> ℹ️ **Nota:** La aplicación creará automáticamente estas colecciones la primera vez que se ejecute.
+
+### 3. 📁 Configurar Firebase Storage
+
+1. En la consola de Firebase, ve a **"Storage"**
+2. Haz clic en **"Comenzar"**
+3. Selecciona las reglas de seguridad iniciales:
+   - **Modo de prueba** para desarrollo
+   - **Modo de producción** para mayor seguridad
+4. Elige la ubicación (recomendado: la misma que Firestore)
+
+**📂 Estructura de Carpetas en Storage:**
+```
+gs://tu-proyecto.appspot.com/
+├── 📁 productos/           # Imágenes de productos
+│   ├── 🖼️ producto1.jpg
+│   ├── 🖼️ producto2.png
+│   └── 🖼️ ...
+└── 📁 sitio/               # Imágenes del sitio
+    ├── 🖼️ portada.jpg
+    └── 🖼️ ...
+```
+
+### 4. 🔒 Configurar Reglas de Seguridad
+
+**Firestore Rules** (`firestore.rules`):
+```javascript
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Permitir lectura pública para mostrar el catálogo
+    match /{document=**} {
+      allow read: if true;
     }
-   ```
 
-5. Configurar las reglas de seguridad en Storage:
- ```javascript
-    rules_version = '2';
-
-    service firebase.storage {
-      match /b/{bucket}/o {
-        // Permitir lectura pública para todas las imágenes
-        match /{allPaths=**} {
-          allow read: if true;
-        }
-        
-        // Permitir escritura en la carpeta sitio/ (para imágenes de portada)
-        match /sitio/{fileName} {
-          allow write:  if request.auth != null;
-        }
-        
-        // Permitir escritura en la carpeta productos/ (para imágenes de productos)
-        match /productos/{fileName} {
-          allow write:  if request.auth != null;
-        }
-      }
+    // Permitir escritura para categorías
+    match /categorias/{categoryId} {
+      allow write: if true;
     }
-   ```
+    
+    // Permitir escritura para productos
+    match /productos/{productId} {
+      allow write: if true;
+    }
+    
+    // Permitir escritura para configuración
+    match /config/{configId} {
+      allow write: if true;
+    }
+  }
+}
+```
 
-## Configuración del Proyecto
+**Storage Rules** (`storage.rules`):
+```javascript
+rules_version = '2';
 
-### Requisitos Previos
-- Node.js 20 o superior
-- Docker y Docker Compose
-- Git
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Permitir lectura pública para todas las imágenes
+    match /{allPaths=**} {
+      allow read: if true;
+    }
+    
+    // Permitir escritura en la carpeta sitio/ (para imágenes de portada)
+    match /sitio/{fileName} {
+      allow write: if true;
+    }
+    
+    // Permitir escritura en la carpeta productos/ (para imágenes de productos)
+    match /productos/{fileName} {
+      allow write: if true;
+    }
+    
+    // Permitir escritura en la carpeta categorias/ (para imágenes de categorías - por si se restaura en el futuro)
+    match /categorias/{fileName} {
+      allow write: if true;
+    }
+  }
+}
+```
 
-### Instrucciones de Instalación
+## 🚀 Instalación y Configuración
 
-1. Clonar el repositorio:
+### 📋 Requisitos Previos
+
+- 🟢 **Node.js** 20 o superior
+- 🐳 **Docker** y **Docker Compose**
+- 🔧 **Git** para clonar el repositorio
+- 🔥 **Cuenta de Firebase** (gratuita)
+
+### 📦 Instalación Paso a Paso
+
+#### 1. 📥 Clonar el Repositorio
 ```bash
 git clone https://github.com/chinoavila/catalogo-vibe-coding.git
-cd catalogoProductos
+cd catalogo-vibe-coding
 ```
 
-2. Configurar las variables de entorno:
-```bash
-cp .env.example .env
-```
-Editar el archivo `.env` con tus credenciales de Firebase y configuración.
+#### 2. 🔧 Configurar Variables de Entorno
 
-3. Configurar Docker:
+Crea un archivo `.env` en la raíz del proyecto con tus credenciales de Firebase:
+
 ```bash
+# Credenciales de Firebase (obtener desde Firebase Console > Configuración del proyecto)
+VITE_API_KEY=tu_api_key_aqui
+VITE_AUTH_DOMAIN=tu_proyecto.firebaseapp.com
+VITE_PROJECT_ID=tu_proyecto_id
+VITE_STORAGE_BUCKET=tu_proyecto.appspot.com
+VITE_MESSAGING_SENDER_ID=tu_messaging_sender_id
+VITE_APP_ID=tu_app_id
+# Contraseña de administrador (cámbiala por una segura)
+VITE_ADMIN_PASS=tu_contraseña_super_segura
+```
+
+> ℹ️ **¿Dónde encontrar las credenciales de Firebase?**
+> 1. Ve a [Firebase Console](https://console.firebase.google.com/)
+> 2. Selecciona tu proyecto
+> 3. Ve a **⚙️ Configuración del proyecto**
+> 4. En la pestaña **General**, busca **"Tus apps"**
+> 5. Si no tienes una app web, haz clic en **"</>** para agregar una
+> 6. Copia las credenciales que aparecen en `firebaseConfig`
+
+#### 3. 🐳 Configurar Docker
+
+```bash
+# Copia el archivo de ejemplo de Docker Compose
 cp docker-compose.example.yml docker-compose.yml
 ```
-Ajustar la configuración de Docker según sea necesario.
 
-4. Instalar dependencias (opcional, Docker lo hará automáticamente):
-```powershell
-npm install
-```
+Puedes editar `docker-compose.yml` si necesitas cambiar puertos o configuraciones específicas.
 
-5. Iniciar la aplicación:
-```powershell
+#### 4. 🚀 Iniciar la Aplicación
+
+**Opción A: Con Docker (Recomendado)**
+```bash
 docker-compose up --build
 ```
 
-La aplicación estará disponible en `http://localhost:5173`
+**Opción B: Instalación Local**
+```bash
+# Instalar dependencias
+npm install
 
-### Estructura del Proyecto
-
-```
-.
-├── public/
-│   ├── favicon.ico    # Favicon del sitio
-│   └── logo.png       # Logo principal utilizado en loader y verificación de edad
-├── src/
-│   ├── app.js         # Lógica principal de la aplicación
-│   ├── main.js        # Punto de entrada
-│   └── styles.css     # Estilos
-├── .env  # Archivo de entorno
-├── .env.example  # Ejemplo de archivo de entorno
-├── docker-compose.yml # Configuración de Docker
-├── docker-compose.example.yml  # Ejemplo de configuración Docker
-├── package.json       # Dependencias del proyecto
-└── vite.config.js     # Configuración de Vite
+# Iniciar servidor de desarrollo
+npm run dev
 ```
 
-### Notas de Seguridad
+#### 5. 🌐 Acceder a la Aplicación
 
-- Nunca compartir el archivo `.env` con credenciales
-- Mantener segura la contraseña de administrador
-- La configuración de Docker puede contener información sensible
-- El volúmen de Docker `node_modules` mantiene las dependencias
+La aplicación estará disponible en: http://localhost:5173
 
-### Assets y Archivos Estáticos
+### 🎯 Primera Configuración
 
-- **favicon.ico**: Favicon del sitio web que aparece en la pestaña del navegador
-- **logo.png**: Logo principal utilizado en el loader de carga y pantalla de verificación de edad
-- **public/**: Directorio donde Vite busca archivos estáticos que se copiarán directamente al build
+1. **Accede al panel de administración** con la contraseña que configuraste en `.env`
+2. **Configura la información del sitio**: nombre, eslóganes, textos, etc.
+3. **Sube una imagen de portada** desde la sección de configuración
+4. **Agrega tus primeros productos** con descripciones, precios e imágenes
+5. **¡Listo!** Tu catálogo ya está funcionando
 
-Durante el build (`npm run build`), Vite copiará automáticamente todos los archivos del directorio `public/` (como `favicon.ico` y `logo.png`) a la raíz del directorio de distribución, manteniendo la estructura de referencias en el HTML.
+## 📁 Estructura del Proyecto
+
+```
+📦 catalogo-vibe-coding/
+├── 📁 public/                      # Archivos estáticos públicos
+│   ├── 🖼️ favicon.ico              # Icono del sitio (16x16, 32x32, 48x48)
+│   └── 🖼️ logo.png                 # Logo principal (usado en loader y verificación)
+├── 📁 src/                         # Código fuente de la aplicación
+│   ├── 📄 app.js                   # Lógica principal y manejo de Firebase
+│   ├── 📄 main.js                  # Punto de entrada de la aplicación
+│   └── 🎨 styles.css               # Estilos CSS personalizados
+├── 📁 dist/                        # Build de producción (generado)
+├── 📁 node_modules/                # Dependencias de Node.js (no incluir en Git)
+├── 📁 .firebase/                   # Archivos de configuración de Firebase
+├── ⚙️ .env                         # Variables de entorno (NO incluir en Git)
+├── 📄 .env.example                 # Plantilla de variables de entorno
+├── 📄 .firebaserc                  # Configuración de proyectos Firebase
+├── 📄 .gitignore                   # Archivos ignorados por Git
+├── 🐳 docker-compose.yml           # Configuración de Docker
+├── 📄 docker-compose.example.yml   # Plantilla de Docker Compose
+├── 🔥 firebase.json                # Configuración de Firebase Hosting
+├── 🗄️ firestore.indexes.json       # Índices de Firestore
+├── 🔒 firestore.rules              # Reglas de seguridad de Firestore
+├── 🌐 index.html                   # Página principal HTML
+├── 📦 package.json                 # Dependencias y scripts de Node.js
+├── 📦 package-lock.json            # Versiones exactas de dependencias
+├── 📖 README.md                    # Documentación del proyecto
+├── 📁 storage.rules                # Reglas de seguridad de Storage
+└── ⚡ vite.config.js               # Configuración de Vite
+```
+
+### 🔧 Scripts Disponibles
+
+```bash
+# 🚀 Desarrollo - Inicia servidor con hot reload
+npm run dev
+
+# 🏗️ Construir - Genera build optimizado para producción
+npm run build
+
+# 👀 Vista Previa - Previsualiza el build de producción
+npm run preview
+
+# 🐳 Docker - Inicia con Docker Compose
+docker-compose up --build
+
+# 🛑 Docker - Detiene los contenedores
+docker-compose down
+```
+
+## 💡 Funcionalidades Detalladas
+
+### 🏠 **Vista Pública del Catálogo**
+- ✅ Diseño responsive que se adapta a móviles, tablets y desktop
+- ✅ Carga de productos desde Firebase Firestore en tiempo real
+- ✅ Navegación por categorías de productos
+- ✅ Filtros por categoría y búsqueda por texto
+- ✅ Visualización en grid adaptativo con cards de productos
+- ✅ Paginación de productos para mejor rendimiento
+- ✅ Ordenamiento de productos por precio
+- ✅ Modal de verificación de edad configurable
+- ✅ Loader animado con logo personalizable
+- ✅ Información de contacto y redes sociales
+- ✅ Secciones: Categorías, Catálogo de Productos, Acerca de, Contacto
+
+### ⚙️ **Panel de Administración**
+- ✅ Autenticación segura con bcrypt
+- ✅ Gestión completa de productos (CRUD)
+- ✅ Gestión completa de categorías (CRUD)
+- ✅ Organización de productos por categorías
+- ✅ Subida de imágenes a Firebase Storage
+- ✅ Configuración de textos del sitio
+- ✅ Gestión de imagen de portada
+- ✅ Configuración de redes sociales
+
+### 🔒 **Seguridad**
+- ✅ Contraseñas encriptadas en hash con bcrypt
+- ✅ Reglas de Firestore para lectura y escritura configurable
+- ✅ Validación de formularios
+- ✅ Sanitización de inputs
+- ✅ Variables de entorno para credenciales sensibles
+
+## 🚀 Despliegue en Producción
+
+### 🌐 Firebase Hosting (Recomendado)
+
+```bash
+# 1. Instalar Firebase CLI
+npm install -g firebase-tools
+
+# 2. Autenticarse en Firebase
+firebase login
+
+# 3. Inicializar el proyecto (ya configurado)
+firebase init
+
+# 4. Construir el proyecto
+npm run build
+
+# 5. Desplegar
+firebase deploy
+```
+
+### 🐳 Docker en Servidor
+
+```bash
+# 1. Clonar en el servidor
+git clone https://github.com/chinoavila/catalogo-vibe-coding.git
+cd catalogo-vibe-coding
+
+# 2. Configurar variables de entorno
+cp .env.example .env
+# Editar .env con credenciales de producción
+
+# 3. Desplegar con Docker
+docker-compose up -d --build
+```
+
+### ⚠️ Consideraciones de Producción
+
+- 🔐 **Cambiar contraseña de admin** antes del despliegue
+- 🌐 **Configurar dominio personalizado** en Firebase Hosting
+- 🔒 **Habilitar HTTPS** (automático con Firebase Hosting)
+- 📊 **Configurar reglas de Firestore** en modo producción
+- 🗄️ **Hacer backup** de Firestore regularmente
+- 📈 **Monitorear uso** de Firebase para evitar costos inesperados
+
+## 🛠️ Desarrollo y Personalización
+
+### 🎨 **Personalizar Estilos**
+
+El archivo `src/styles.css` contiene todos los estilos personalizados:
+
+```css
+/* Variables CSS para colores principales */
+:root {
+  --primary-color: #your-color;
+  --secondary-color: #your-color;
+  --accent-color: #your-color;
+}
+```
+
+### 🔧 **Configuración de Vite**
+
+`vite.config.js` está configurado para:
+- 🌐 Servidor en host `0.0.0.0` (accesible desde Docker)
+- 📁 Directorio público en `/public`
+- ⚡ Hot Module Replacement habilitado
+- 🔄 Proxy para APIs si es necesario
+
+### 📱 **Responsive Design**
+
+La aplicación utiliza Bootstrap 5 con breakpoints:
+- 📱 **xs**: < 576px (móviles)
+- 📱 **sm**: ≥ 576px (móviles grandes)
+- 💻 **md**: ≥ 768px (tablets)
+- 💻 **lg**: ≥ 992px (desktops)
+- 🖥️ **xl**: ≥ 1200px (desktops grandes)
+
+## 🤝 Contribuir
+
+### 🐛 **Reportar Bugs**
+
+Si encuentras un error:
+1. 🔍 Verifica que no esté ya reportado en [Issues](https://github.com/chinoavila/catalogo-vibe-coding/issues)
+2. 🆕 Crea un nuevo issue con:
+   - Descripción detallada del problema
+   - Pasos para reproducir
+   - Capturas de pantalla si es posible
+   - Información del entorno (navegador, OS, etc.)
+
+### 💡 **Sugerir Mejoras**
+
+Para proponer nuevas funcionalidades:
+1. 🔍 Revisa la lista de [Issues](https://github.com/chinoavila/catalogo-vibe-coding/issues)
+2. 🆕 Crea un issue con la etiqueta "enhancement"
+3. 📝 Describe la funcionalidad deseada y su caso de uso
+
+### 🔄 **Pull Requests**
+
+1. 🍴 Haz fork del repositorio
+2. 🌿 Crea una rama para tu funcionalidad (`git checkout -b feature/nueva-funcionalidad`)
+3. 💾 Commit tus cambios (`git commit -am 'Agrega nueva funcionalidad'`)
+4. 📤 Push a la rama (`git push origin feature/nueva-funcionalidad`)
+5. 🔄 Crea un Pull Request
+
+## 🔧 Solución de Problemas Comunes
+
+### ❌ **Error: Firebase no está configurado**
+```bash
+# Verifica que el archivo .env existe y tiene las credenciales correctas
+cat .env
+
+# Reinicia el servidor de desarrollo
+npm run dev
+```
+
+### ❌ **Error: Puerto 5173 en uso**
+```bash
+# Mata el proceso en el puerto 5173
+npx kill-port 5173
+
+# O cambia el puerto en vite.config.js
+```
+
+### ❌ **Error: Permisos de Firebase**
+```bash
+# Verifica las reglas de Firestore y Storage
+# Asegúrate de que las reglas permitan lectura pública
+```
+
+### ❌ **Error: Imágenes no se cargan**
+```bash
+# Verifica la configuración de CORS en Firebase Storage
+# Asegúrate de que las imágenes están en las carpetas correctas
+```
+
+## 📄 Licencia
+
+Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) para más detalles.
+
+---
+
+<div align="center">
+
+**⭐ Si este proyecto te fue útil, considera darle una estrella en GitHub ⭐**
+
+</div>

@@ -1266,11 +1266,13 @@ function showImageSlider(product) {
     const productTitle = document.querySelector('#modalImageSlider .product-title');
     const productPrice = document.querySelector('#modalImageSlider .product-price span');
     const productDescription = document.querySelector('#modalImageSlider .product-description');
+    const productDetails = document.querySelector('#modalImageSlider .product-details');
     const prevBtn = document.getElementById('prevProduct');
     const nextBtn = document.getElementById('nextProduct');
 
     // Encuentra el índice del producto actual
     let currentIndex = products.findIndex(p => p._id === product._id);
+    
     function updateSliderContent(newProduct, newIndex) {
         modalTitle.textContent = 'Vista del Producto';
         sliderImage.src = newProduct.image || '';
@@ -1285,6 +1287,17 @@ function showImageSlider(product) {
 
         // Actualizar el índice current
         currentIndex = newIndex;
+        
+        // Bloquear temporalmente la expansión automática durante la navegación
+        if (productDetails) {
+            productDetails.classList.add('details-locked');
+            productDetails.classList.remove('details-visible');
+            
+            // Después de un breve delay, permitir la expansión manual nuevamente
+            setTimeout(() => {
+                productDetails.classList.remove('details-locked');
+            }, 500);
+        }
     }
     // Configurar navegación
     prevBtn.onclick = () => {
@@ -1301,6 +1314,38 @@ function showImageSlider(product) {
         }
     };
 
+    // Agregar eventos para evitar la expansión automática al interactuar con los botones
+    const preventDetailsExpansion = (e) => {
+        e.stopPropagation();
+        if (productDetails) {
+            productDetails.classList.add('details-locked');
+            productDetails.classList.remove('details-visible');
+            // Forzar que se oculten inmediatamente
+            productDetails.style.transform = 'translateY(100%)';
+        }
+    };
+
+    const allowDetailsExpansion = () => {
+        setTimeout(() => {
+            if (productDetails) {
+                productDetails.classList.remove('details-locked');
+                // Permitir que CSS tome control nuevamente
+                productDetails.style.transform = '';
+            }
+        }, 300);
+    };
+
+    // Eventos para los botones de navegación
+    prevBtn.addEventListener('mouseenter', preventDetailsExpansion);
+    prevBtn.addEventListener('mouseleave', allowDetailsExpansion);
+    prevBtn.addEventListener('focus', preventDetailsExpansion);
+    prevBtn.addEventListener('blur', allowDetailsExpansion);
+    
+    nextBtn.addEventListener('mouseenter', preventDetailsExpansion);
+    nextBtn.addEventListener('mouseleave', allowDetailsExpansion);
+    nextBtn.addEventListener('focus', preventDetailsExpansion);
+    nextBtn.addEventListener('blur', allowDetailsExpansion);
+
     // También permitir navegación con teclado
     const handleKeydown = (e) => {
         if (e.key === 'ArrowLeft' && currentIndex > 0) {
@@ -1312,10 +1357,29 @@ function showImageSlider(product) {
 
     document.addEventListener('keydown', handleKeydown);
 
-    // Limpiar event listener al cerrar el modal
-    document.getElementById('modalImageSlider').addEventListener('hidden.bs.modal', () => {
+    // Limpiar event listeners al cerrar el modal
+    const cleanupModalEvents = () => {
         document.removeEventListener('keydown', handleKeydown);
-    });
+        
+        // Limpiar eventos de los botones de navegación
+        prevBtn.removeEventListener('mouseenter', preventDetailsExpansion);
+        prevBtn.removeEventListener('mouseleave', allowDetailsExpansion);
+        prevBtn.removeEventListener('focus', preventDetailsExpansion);
+        prevBtn.removeEventListener('blur', allowDetailsExpansion);
+        
+        nextBtn.removeEventListener('mouseenter', preventDetailsExpansion);
+        nextBtn.removeEventListener('mouseleave', allowDetailsExpansion);
+        nextBtn.removeEventListener('focus', preventDetailsExpansion);
+        nextBtn.removeEventListener('blur', allowDetailsExpansion);
+        
+        // Restablecer estilos inline
+        if (productDetails) {
+            productDetails.style.transform = '';
+            productDetails.classList.remove('details-locked', 'details-visible');
+        }
+    };
+
+    document.getElementById('modalImageSlider').addEventListener('hidden.bs.modal', cleanupModalEvents);
 
     updateSliderContent(product, currentIndex);
 
