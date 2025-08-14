@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>[Nombre del sitio] | Catálogo de Productos</title>
+  <title>Shameless SexShop</title>
   <!-- Favicon -->
   <link rel="icon" type="image/x-icon" href="favicon.ico">
   <!-- Plantilla gratuita: Bootstrap 5 -->
@@ -392,6 +392,51 @@
         transform="rotate(180,8,8)" />
     </svg>
   </button>
+  <!-- Botón Carrito -->
+  <button id="btn-cart" class="btn-cart" aria-label="Carrito">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M7 4h-2l-1 2h2l3.6 7.59-1.35 2.45C7.89 16.37 8 16.68 8 17a2 2 0 1 0 2-2h4a2 2 0 1 0 2 2c0-.32-.11-.63-.25-.91l3.25-5.91A1 1 0 0 0 18 7H9.21l-.94-2H7z"/>
+    </svg>
+    <span id="cart-count" class="badge rounded-pill">0</span>
+  </button>
+
+  <!-- Modal Carrito -->
+  <div class="modal fade" id="modalCart" tabindex="-1" aria-labelledby="modalCartLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content bg-dark text-light">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalCartLabel">Tu Carrito</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+          <div id="cart-empty" class="text-center text-secondary d-none">Tu carrito está vacío.</div>
+          <div id="cart-items"></div>
+          <hr>
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div class="fw-bold fs-5">Total: <span id="cart-total" class="text-pink">$0.00</span></div>
+            <div class="d-flex gap-2">
+              <button id="btn-clear-cart" class="btn btn-outline-light">Vaciar</button>
+              <button id="btn-copy-order" class="btn btn-outline-light">Copiar pedido</button>
+              <button id="btn-send-instagram" class="btn btn-pink" title="Abrirá el chat de Instagram. El pedido se copia y podés pegarlo en el DM">Enviar por Instagram</button>
+            </div>
+          </div>
+          <div class="mt-3">
+            <label class="form-label">Vista previa del mensaje</label>
+            <textarea id="order-preview" class="form-control bg-dark text-light" rows="5" readonly></textarea>
+            <div id="dm-instructions" class="mt-2 small text-secondary">
+              ¿Cómo enviar por Instagram?
+              <ol class="mb-0 ps-3">
+                <li>Presioná <strong>Enviar por Instagram</strong>.</li>
+                <li>Se abrirá el chat del perfil.</li>
+                <li><strong>Pegá</strong> el mensaje del pedido en el chat y enviá.</li>
+              </ol>
+              Tip: si no se copió automáticamente, usá <em>Copiar pedido</em> o copiá desde la vista previa.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
   <!-- Toast Container -->
   <div class="toast-container"></div>
 </body>

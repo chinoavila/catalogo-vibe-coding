@@ -355,6 +355,17 @@ function updateSiteConfigUI(config) {
             document.getElementById('shipping-text').textContent = config.shippingInfo || '[Información de envíos]'; document.getElementById('instagram-link').href = config.instagramUrl || '#';
             document.getElementById('instagram-handle').textContent = config.instagramHandle || '[Usuario de Instagram]';
 
+            // Mostrar/ocultar botón de Instagram según configuración
+            try {
+                const btnIg = document.getElementById('btn-send-instagram');
+                if (btnIg) {
+                    const hasHandle = !!(config.instagramHandle && config.instagramHandle.trim() && config.instagramHandle !== '[Usuario de Instagram]');
+                    const hasUrl = !!(config.instagramUrl && config.instagramUrl.trim() && config.instagramUrl !== '#');
+                    const showIg = hasHandle || hasUrl;
+                    btnIg.style.display = showIg ? '' : 'none';
+                }
+            } catch {}
+
             // Actualizar la contraseña del módulo de administración si existe
             if (config.adminPassword) {
                 adminModule.updatePassword(config.adminPassword);
@@ -406,6 +417,12 @@ function updateSiteConfigUI(config) {
             document.getElementById('shipping-text').textContent = '[Información de envíos]';
             document.getElementById('instagram-link').href = '#';
             document.getElementById('instagram-handle').textContent = '[Usuario de Instagram]';
+
+            // Sin configuración: ocultar botón de Instagram
+            try {
+                const btnIg = document.getElementById('btn-send-instagram');
+                if (btnIg) btnIg.style.display = 'none';
+            } catch {}
 
             // No hay configuración, por lo tanto no se requiere verificación de edad
             checkAgeVerification(null);
@@ -1000,6 +1017,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 
+    // Inicializar carrito UI
+    initCartUI();
+
     const productosCol = collection(db, 'productos');
     onSnapshot(productosCol, (snapshot) => {
         console.log('🔄 Cargando productos...');
@@ -1463,7 +1483,9 @@ function renderProducts() {
             </div>${isAdmin ? `<div class='card-footer bg-transparent border-0 d-flex gap-2'>
                 <button class='btn btn-pink flex-fill' onclick="window.editProduct('${product._id}')">Editar</button>
                 <button class='btn btn-danger flex-fill' onclick="window.deleteProduct('${product._id}')">Eliminar</button>
-            </div>` : ''}
+            </div>` : `<div class='card-footer bg-transparent border-0'>
+                <button class='btn btn-pink w-100' onclick="window.addToCart('${product._id}')">Agregar al carrito</button>
+            </div>`}
         </div>
         `;
 
@@ -2058,3 +2080,203 @@ setTimeout(() => {
     console.log('product-form exists:', !!productForm);
     console.log('=== END DEBUG ===');
 }, 3000);
+
+// =====================
+// Carrito de compras
+// =====================
+const CART_KEY = 'vibeCartV1';
+let cart = [];
+
+function loadCart() {
+    try {
+        cart = JSON.parse(localStorage.getItem(CART_KEY) || '[]');
+    } catch { cart = []; }
+}
+
+function saveCart() {
+    localStorage.setItem(CART_KEY, JSON.stringify(cart));
+    updateCartBadge();
+}
+
+function updateCartBadge() {
+    const badge = document.getElementById('cart-count');
+    if (!badge) return;
+    const count = cart.reduce((acc, it) => acc + it.qty, 0);
+    badge.textContent = String(count);
+}
+
+function findProductById(id) {
+    return products.find(p => p._id === id);
+}
+
+function addItem(product, qty = 1) {
+    const existing = cart.find(it => it.id === product._id);
+    if (existing) existing.qty += qty; else cart.push({ id: product._id, description: product.description, price: parseFloat(product.price), qty });
+    saveCart();
+    showToast('Producto agregado al carrito', 'success');
+}
+
+function removeItem(id) {
+    cart = cart.filter(it => it.id !== id);
+    saveCart();
+    renderCartModal();
+}
+
+function changeQty(id, qty) {
+    const item = cart.find(it => it.id === id);
+    if (!item) return;
+    item.qty = Math.max(1, Math.min(99, parseInt(qty || '1', 10)));
+    saveCart();
+    renderCartModal();
+}
+
+function clearCart() {
+    cart = [];
+    saveCart();
+    renderCartModal();
+}
+
+function getCartTotal() {
+    return cart.reduce((acc, it) => acc + it.price * it.qty, 0);
+}
+
+function formatCurrency(n) { return `$${n.toFixed(2)}`; }
+
+function buildOrderMessage() {
+    const siteName = document.querySelector('.navbar-brand')?.textContent?.trim() || 'Tienda';
+    let lines = [];
+    lines.push(`Hola! Quiero hacer un pedido en ${siteName}:`);
+    lines.push('');
+    cart.forEach((it, idx) => {
+        lines.push(`${idx + 1}. ${it.description} x${it.qty} — ${formatCurrency(it.price * it.qty)}`);
+    });
+    lines.push('');
+    lines.push(`Total: ${formatCurrency(getCartTotal())}`);
+    lines.push('');
+    lines.push('¿Está disponible? ¡Gracias!');
+    return lines.join('\n');
+}
+
+function renderCartModal() {
+    const container = document.getElementById('cart-items');
+    const empty = document.getElementById('cart-empty');
+    const total = document.getElementById('cart-total');
+    const preview = document.getElementById('order-preview');
+    if (!container || !empty || !total || !preview) return;
+
+    container.innerHTML = '';
+    if (cart.length === 0) {
+        empty.classList.remove('d-none');
+        total.textContent = '$0.00';
+        preview.value = '';
+        return;
+    }
+    empty.classList.add('d-none');
+    cart.forEach(it => {
+        const row = document.createElement('div');
+        row.className = 'cart-item';
+        row.innerHTML = `
+            <div class="item-desc">${it.description}</div>
+            <div class="item-price">${formatCurrency(it.price * it.qty)}</div>
+            <div class="qty-controls">
+                <button class="btn btn-outline-light btn-sm" data-action="dec">-</button>
+                <input class="form-control form-control-sm bg-dark text-light" type="number" min="1" max="99" value="${it.qty}">
+                <button class="btn btn-outline-light btn-sm" data-action="inc">+</button>
+            </div>
+            <button class="btn btn-danger btn-sm" data-action="remove">Eliminar</button>
+        `;
+        const [decBtn, qtyInput, incBtn] = row.querySelectorAll('.qty-controls button, .qty-controls input');
+        row.querySelector('[data-action="remove"]').addEventListener('click', () => removeItem(it.id));
+        row.querySelector('[data-action="dec"]').addEventListener('click', () => changeQty(it.id, it.qty - 1));
+        row.querySelector('[data-action="inc"]').addEventListener('click', () => changeQty(it.id, it.qty + 1));
+        row.querySelector('input').addEventListener('change', (e) => changeQty(it.id, e.target.value));
+        container.appendChild(row);
+    });
+    total.textContent = formatCurrency(getCartTotal());
+    preview.value = buildOrderMessage();
+}
+
+function openCartModal() {
+    renderCartModal();
+    const modalEl = document.getElementById('modalCart');
+    if (!modalEl) return;
+    const modal = window.bootstrap?.Modal.getOrCreateInstance(modalEl) || new bootstrap.Modal(modalEl);
+    modal.show();
+}
+
+function initCartUI() {
+    loadCart();
+    updateCartBadge();
+    const btnCart = document.getElementById('btn-cart');
+    if (btnCart) btnCart.addEventListener('click', openCartModal);
+    const btnClear = document.getElementById('btn-clear-cart');
+    if (btnClear) btnClear.addEventListener('click', () => { if (cart.length && confirm('¿Vaciar carrito?')) clearCart(); });
+    const btnCopy = document.getElementById('btn-copy-order');
+    if (btnCopy) btnCopy.addEventListener('click', async () => {
+        const text = buildOrderMessage();
+        try { await navigator.clipboard.writeText(text); showToast('Pedido copiado al portapapeles', 'success'); }
+        catch { showToast('No se pudo copiar. Selecciona el texto manualmente.', 'error'); }
+    });
+    const btnIg = document.getElementById('btn-send-instagram');
+    if (btnIg) btnIg.addEventListener('click', async () => {
+        // Evitar envío si no hay productos
+        if (!cart.length) {
+            showToast('Tu carrito está vacío', 'error');
+            return;
+        }
+
+        const igUrl = document.getElementById('instagram-link')?.href || '#';
+        const handleRaw = document.getElementById('instagram-handle')?.textContent || '';
+        const handle = handleRaw.replace('@', '').trim();
+        const text = buildOrderMessage();
+
+        // Preferir ig.me si tenemos handle (abre chat con el perfil)
+        let target = igUrl;
+        if (handle) target = `https://ig.me/m/${encodeURIComponent(handle)}`;
+        if (!target || target === '#') return; // Silencioso: no hacer nada si no hay destino
+
+        // 1) Intentar copiar primero (más fiable si se hace antes de abrir otra pestaña)
+        let copied = false;
+        try {
+            await navigator.clipboard.writeText(text);
+            copied = true;
+        } catch (e) {
+            // Fallback: intentar seleccionar el textarea de vista previa y copiar
+            try {
+                const ta = document.getElementById('order-preview');
+                if (ta) {
+                    ta.removeAttribute('readonly');
+                    ta.focus();
+                    ta.select();
+                    const ok = document.execCommand && document.execCommand('copy');
+                    ta.setAttribute('readonly', 'true');
+                    copied = !!ok;
+                }
+            } catch {}
+        }
+
+        // 2) Abrir el chat en una nueva pestaña/ventana
+        try {
+            window.open(target, '_blank', 'noopener');
+        } catch (e) {
+            // Si el navegador bloquea popups, pedir interacción del usuario
+            showToast('No se pudo abrir Instagram automáticamente. Permite ventanas emergentes o haz clic de nuevo.', 'error');
+            return;
+        }
+
+        // 3) Informar al usuario
+        if (copied) {
+            showToast('Abrí Instagram. El pedido está copiado, pégalo en el DM.', 'success');
+        } else {
+            showToast('Abrí Instagram. Copia el pedido desde la vista previa y pégalo en el DM.', 'info');
+        }
+    });
+}
+
+// API global mínima
+window.addToCart = function(productId) {
+    const p = findProductById(productId);
+    if (!p) { showToast('Producto no encontrado', 'error'); return; }
+    addItem(p, 1);
+};
+window.openCart = openCartModal;
