@@ -160,6 +160,11 @@ body, .modal-content {
     min-height: 100vh;
 }
 
+/* Evitar scroll horizontal accidental en móviles */
+html, body {
+    overflow-x: hidden;
+}
+
 /* Clase para deshabilitar scroll cuando loader o verificación están activos */
 body.no-scroll {
     overflow: hidden !important;
@@ -557,6 +562,39 @@ section:nth-of-type(4) { animation-delay: 0.7s; }
 @media (max-width: 600px) {
     .navbar-brand { font-size: 1.1em; }
     .card.product-card { min-width: 90vw; }
+}
+
+/* Toolbar del catálogo: asegurar wrap en móviles y que el botón de ordenar sea visible */
+#catalog-toolbar-left {
+    flex-wrap: wrap;
+    min-width: 0; /* permitir que los hijos se encojan sin forzar overflow */
+}
+
+@media (max-width: 576px) {
+    #catalog-toolbar-left {
+        gap: 0.5rem !important;
+    }
+    #catalog-toolbar-left h2 {
+        font-size: 1.1rem;
+        flex: 1 1 100%; /* titulo en línea completa para dejar espacio a botones */
+    }
+    #current-category-name {
+    order: 3; /* debajo del título */
+    max-width: 60vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    }
+    #btn-back-categories {
+        order: 1;
+        padding: 0.4rem 0.6rem;
+    }
+    #btn-sort-price {
+        order: 2;
+        white-space: nowrap; /* evitar corte del texto */
+        padding: 0.35rem 0.6rem;
+        font-size: 0.9rem;
+    }
 }
 
 /* Estilos para la paginación */
