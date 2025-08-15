@@ -669,6 +669,7 @@ const adminModule = (() => {
                 document.getElementById('btn-add-product').classList.remove('d-none');
                 document.getElementById('btn-add-category').classList.remove('d-none');
                 document.getElementById('btn-add-product-categories').classList.remove('d-none');
+                document.getElementById('btn-price-management').classList.remove('d-none');
                 document.getElementById('btn-edit-site').classList.remove('d-none');
                 document.getElementById('logout-container').style.display = 'block';
                 document.getElementById('change-password-container').style.display = 'block';
@@ -694,6 +695,7 @@ const adminModule = (() => {
         document.getElementById('btn-add-product').classList.add('d-none');
         document.getElementById('btn-add-category').classList.add('d-none');
         document.getElementById('btn-add-product-categories').classList.add('d-none');
+        document.getElementById('btn-price-management').classList.add('d-none');
         document.getElementById('btn-edit-site').classList.add('d-none');
         document.getElementById('change-password-container').style.display = 'none';
         document.getElementById('btn-admin').style.display = '';
@@ -782,6 +784,54 @@ const adminModule = (() => {
         }
     }
 
+    async function updatePricesByCategory(productosCol, categoryId, percentage) {
+        if (!isAdmin) {
+            showToast('Acceso restringido.', 'error');
+            return;
+        }
+        try {
+            console.log('💰 Actualizando precios por categoría:', categoryId, `${percentage}%`);
+            
+            // Obtener productos de la categoría específica
+            const categoryProducts = products.filter(product => product.categoryId === categoryId);
+            
+            if (categoryProducts.length === 0) {
+                throw new Error('No se encontraron productos en esta categoría');
+            }
+            
+            const multiplier = 1 + (percentage / 100);
+            const updatedProducts = [];
+            
+            // Actualizar cada producto
+            for (const product of categoryProducts) {
+                const oldPrice = parseFloat(product.price);
+                const newPrice = Math.round(oldPrice * multiplier * 100) / 100; // Redondear a 2 decimales
+                
+                const productRef = doc(productosCol, product._id);
+                await updateDoc(productRef, { price: newPrice });
+                
+                updatedProducts.push({
+                    id: product._id,
+                    description: product.description,
+                    oldPrice,
+                    newPrice
+                });
+                
+                console.log(`✅ Producto "${product.description}": $${oldPrice} → $${newPrice}`);
+            }
+            
+            console.log('✅ Actualización de precios completada');
+            return updatedProducts;
+        } catch (error) {
+            console.error('❌ Error actualizando precios por categoría:', error);
+            console.error('Error details:', {
+                code: error.code,
+                message: error.message
+            });
+            throw error;
+        }
+    }
+
     function isAdminCheck() {
         return isAdmin;
     }
@@ -793,6 +843,7 @@ const adminModule = (() => {
         deleteProduct, 
         addCategory, 
         deleteCategory, 
+        updatePricesByCategory,
         isAdmin: isAdminCheck, 
         updatePassword,
         restoreAdminSession 
@@ -899,6 +950,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('btn-add-product').classList.remove('d-none');
         document.getElementById('btn-add-category').classList.remove('d-none');
         document.getElementById('btn-add-product-categories').classList.remove('d-none');
+        document.getElementById('btn-price-management').classList.remove('d-none');
         document.getElementById('btn-edit-site').classList.remove('d-none');
         document.getElementById('logout-container').style.display = 'block';
         document.getElementById('change-password-container').style.display = 'block';
@@ -920,6 +972,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Event listeners para formularios
     document.getElementById('category-form').addEventListener('submit', saveCategoryForm);
+    document.getElementById('price-management-form').addEventListener('submit', savePriceManagementForm);
     
     // Event listeners para vista previa de imágenes
     setupImagePreviews();
@@ -929,6 +982,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('modalCategoryLabel').textContent = 'Agregar Categoría';
         document.getElementById('category-id').value = '';
         document.getElementById('category-name').value = '';
+    });
+
+    // Event listener para limpiar formulario de gestión de precios al abrirlo
+    document.getElementById('btn-price-management').addEventListener('click', () => {
+        updatePriceCategorySelect();
+        document.getElementById('price-category').value = '';
+        document.getElementById('price-percentage').value = '';
+        updatePricePreview();
     });
 
     // Event listener para limpiar formulario de producto al abrirlo
@@ -989,6 +1050,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             searchInput.focus();
         });
     }
+
+    // Event listeners para vista previa de precios
+    document.getElementById('price-category').addEventListener('change', updatePricePreview);
+    document.getElementById('price-percentage').addEventListener('input', updatePricePreview);
 
     // Manejar el evento de cierre de sesión
     document.getElementById('btn-logout').addEventListener('click', (e) => {
@@ -1830,6 +1895,157 @@ async function saveCategoryForm(e) {
     }
 }
 
+// Función para actualizar el select de categorías en gestión de precios
+function updatePriceCategorySelect() {
+    const select = document.getElementById('price-category');
+    if (!select) return;
+
+    // Limpiar opciones existentes excepto la primera
+    select.innerHTML = '<option value="">Selecciona una categoría</option>';
+
+    // Agregar las categorías disponibles
+    categories.forEach(category => {
+        const option = document.createElement('option');
+        option.value = category._id;
+        option.textContent = category.name;
+        select.appendChild(option);
+    });
+}
+
+// Función para actualizar la vista previa de precios
+function updatePricePreview() {
+    const categoryId = document.getElementById('price-category').value;
+    const percentage = parseFloat(document.getElementById('price-percentage').value);
+    const previewDiv = document.getElementById('price-preview');
+
+    if (!categoryId || isNaN(percentage)) {
+        previewDiv.innerHTML = '<p style="color: var(--text-main);">Selecciona una categoría y porcentaje para ver la vista previa</p>';
+        return;
+    }
+
+    // Obtener productos de la categoría seleccionada
+    const categoryProducts = products.filter(product => product.categoryId === categoryId);
+    const selectedCategory = categories.find(cat => cat._id === categoryId);
+
+    if (categoryProducts.length === 0) {
+        previewDiv.innerHTML = '<p style="color: var(--text-main);">No hay productos en esta categoría</p>';
+        return;
+    }
+
+    const multiplier = 1 + (percentage / 100);
+    let previewHTML = `
+        <div class="mb-2">
+            <strong>Categoría:</strong> ${selectedCategory ? selectedCategory.name : 'Desconocida'}
+        </div>
+        <div class="mb-2">
+            <strong>Aumento:</strong> ${percentage}%
+        </div>
+        <div class="mb-3">
+            <strong>Productos afectados:</strong> ${categoryProducts.length}
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm table-dark table-bordered">
+                <thead class="table-dark" style="background-color: var(--sidebar-bg) !important;">
+                    <tr>
+                        <th>Producto</th>
+                        <th>Precio Actual</th>
+                        <th>Precio Nuevo</th>
+                        <th>Diferencia</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    categoryProducts.slice(0, 5).forEach(product => { // Mostrar solo los primeros 5 para no saturar
+        const oldPrice = parseFloat(product.price);
+        const newPrice = Math.round(oldPrice * multiplier * 100) / 100;
+        const difference = newPrice - oldPrice;
+
+        previewHTML += `
+            <tr>
+                <td class="text-truncate" style="max-width: 150px;">${product.description}</td>
+                <td>$${oldPrice.toFixed(2)}</td>
+                <td style="color: var(--text-accent);">$${newPrice.toFixed(2)}</td>
+                <td style="color: var(--sidebar-accent);">+$${difference.toFixed(2)}</td>
+            </tr>
+        `;
+    });
+
+    previewHTML += '</tbody></table>';
+
+    if (categoryProducts.length > 5) {
+        previewHTML += `<p style="color: var(--text-main);" class="small">... y ${categoryProducts.length - 5} productos más</p>`;
+    }
+
+    previewHTML += '</div>';
+
+    previewDiv.innerHTML = previewHTML;
+}
+
+// Función para manejar el formulario de gestión de precios
+async function savePriceManagementForm(e) {
+    e.preventDefault();
+    
+    if (!adminModule.isAdmin()) {
+        showToast('Acceso restringido.', 'error');
+        return;
+    }
+
+    const categoryId = document.getElementById('price-category').value;
+    const percentage = parseFloat(document.getElementById('price-percentage').value);
+
+    // Validar campos requeridos
+    if (!categoryId || isNaN(percentage)) {
+        showToast('Por favor completa todos los campos requeridos', 'error');
+        return;
+    }
+
+    if (percentage < 0) {
+        showToast('El porcentaje no puede ser negativo', 'error');
+        return;
+    }
+
+    // Obtener información de la categoría seleccionada
+    const selectedCategory = categories.find(cat => cat._id === categoryId);
+    const categoryProducts = products.filter(product => product.categoryId === categoryId);
+    
+    if (categoryProducts.length === 0) {
+        showToast('No hay productos en esta categoría', 'error');
+        return;
+    }
+
+    // Usar el modal de confirmación
+    showConfirmModal(
+        '¿Aplicar cambios de precio?',
+        `¿Estás seguro de que deseas aplicar un aumento del ${percentage}% a todos los productos de la categoría "${selectedCategory?.name}"? Esta acción actualizará ${categoryProducts.length} producto(s) y no se puede deshacer.`,
+        'Aplicar Cambios',
+        async () => {
+            try {
+                const productosCol = collection(db, 'productos');
+                
+                showToast('Aplicando cambios de precio...', 'info');
+                
+                const updatedProducts = await adminModule.updatePricesByCategory(productosCol, categoryId, percentage);
+                
+                showToast(
+                    `Precios actualizados correctamente. ${updatedProducts.length} productos de la categoría "${selectedCategory?.name}" fueron actualizados con un aumento del ${percentage}%.`, 
+                    'success'
+                );
+
+                // Cerrar el modal y limpiar el formulario
+                const modal = bootstrap.Modal.getInstance(document.getElementById('modalPriceManagement'));
+                if (modal) modal.hide();
+                document.getElementById('price-management-form').reset();
+                updatePricePreview(); // Limpiar la vista previa
+                
+            } catch (error) {
+                console.error('Error al actualizar precios:', error);
+                showToast('Error al actualizar los precios: ' + error.message, 'error');
+            }
+        }
+    );
+}
+
 
 // Funciones para editar y eliminar categorías
 window.editCategory = function (id) {
@@ -2149,8 +2365,21 @@ function showConfirmModal(title, message, confirmText, onConfirm) {
         if (onConfirm) onConfirm();
     });
 
-    // Mostrar modal
+    // Mostrar modal usando Bootstrap normal
     const modal = window.bootstrap?.Modal.getOrCreateInstance(modalEl) || new bootstrap.Modal(modalEl);
+    
+    // Ajustar z-index del backdrop solo cuando el modal se muestre
+    modalEl.addEventListener('shown.bs.modal', function onShown() {
+        const backdrops = document.querySelectorAll('.modal-backdrop');
+        if (backdrops.length > 1) {
+            // Si hay múltiples backdrops, asegurar que el último tenga mayor z-index
+            const lastBackdrop = backdrops[backdrops.length - 1];
+            lastBackdrop.style.zIndex = '1079';
+        }
+        
+        modalEl.removeEventListener('shown.bs.modal', onShown);
+    }, { once: true });
+    
     modal.show();
 }
 
