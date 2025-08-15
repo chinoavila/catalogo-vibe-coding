@@ -1850,19 +1850,21 @@ window.deleteCategory = async function (id) {
         return;
     }
 
-    if (!confirm('¿Estás seguro de que deseas eliminar esta categoría? Los productos asociados quedarán sin categoría.')) {
-        return;
-    }
-
-    try {
-        const categoriasCol = collection(db, 'categorias');
-
-        await adminModule.deleteCategory(categoriasCol, id);
-        showToast('Categoría eliminada correctamente', 'success');
-    } catch (error) {
-        console.error('Error al eliminar la categoría:', error);
-        showToast('Error al eliminar la categoría', 'error');
-    }
+    showConfirmModal(
+        '¿Eliminar categoría?',
+        '¿Estás seguro de que deseas eliminar esta categoría? Los productos asociados quedarán sin categoría.',
+        'Eliminar',
+        async () => {
+            try {
+                const categoriasCol = collection(db, 'categorias');
+                await adminModule.deleteCategory(categoriasCol, id);
+                showToast('Categoría eliminada correctamente', 'success');
+            } catch (error) {
+                console.error('Error al eliminar la categoría:', error);
+                showToast('Error al eliminar la categoría', 'error');
+            }
+        }
+    );
 }
 
 // Función para actualizar categoría
@@ -1935,20 +1937,27 @@ window.updateProduct = async function (productosCol, id, data) {
 }
 
 window.deleteProduct = async function (id) {
-    try {
-        const productosCol = collection(db, 'productos');
-        const product = products.find(p => p._id === id);
+    showConfirmModal(
+        '¿Eliminar producto?',
+        '¿Estás seguro de que quieres eliminar este producto? Esta acción no se puede deshacer.',
+        'Eliminar',
+        async () => {
+            try {
+                const productosCol = collection(db, 'productos');
+                const product = products.find(p => p._id === id);
 
-        if (product && product.image) {
-            await deleteImage(product.image);
+                if (product && product.image) {
+                    await deleteImage(product.image);
+                }
+
+                await adminModule.deleteProduct(productosCol, id);
+                showToast('Producto eliminado correctamente', 'success');
+            } catch (error) {
+                console.error('Error al eliminar el producto:', error);
+                showToast('Error al eliminar el producto', 'error');
+            }
         }
-
-        await adminModule.deleteProduct(productosCol, id);
-        showToast('Producto eliminado correctamente', 'success');
-    } catch (error) {
-        console.error('Error al eliminar el producto:', error);
-        showToast('Error al eliminar el producto', 'error');
-    }
+    );
 }
 
 // Función para cambiar la contraseña
@@ -2116,10 +2125,46 @@ function addItem(product, qty = 1) {
     showToast('Producto agregado al carrito', 'success');
 }
 
+// Función universal para mostrar confirmaciones
+function showConfirmModal(title, message, confirmText, onConfirm) {
+    const modalEl = document.getElementById('modalConfirm');
+    if (!modalEl) return;
+
+    // Actualizar contenido del modal
+    const titleEl = document.getElementById('modalConfirmLabel');
+    const messageEl = document.getElementById('modalConfirmMessage');
+    const confirmBtn = document.getElementById('btn-confirm-action');
+
+    if (titleEl) titleEl.textContent = title;
+    if (messageEl) messageEl.textContent = message;
+    if (confirmBtn) confirmBtn.textContent = confirmText;
+
+    // Limpiar eventos anteriores y agregar el nuevo
+    const newConfirmBtn = confirmBtn.cloneNode(true);
+    confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+    
+    newConfirmBtn.addEventListener('click', () => {
+        const modal = window.bootstrap?.Modal.getOrCreateInstance(modalEl);
+        if (modal) modal.hide();
+        if (onConfirm) onConfirm();
+    });
+
+    // Mostrar modal
+    const modal = window.bootstrap?.Modal.getOrCreateInstance(modalEl) || new bootstrap.Modal(modalEl);
+    modal.show();
+}
+
 function removeItem(id) {
-    cart = cart.filter(it => it.id !== id);
-    saveCart();
-    renderCartModal();
+    showConfirmModal(
+        '¿Eliminar producto?',
+        '¿Estás seguro de que quieres eliminar este producto del carrito?',
+        'Eliminar',
+        () => {
+            cart = cart.filter(it => it.id !== id);
+            saveCart();
+            renderCartModal();
+        }
+    );
 }
 
 function changeQty(id, qty) {
@@ -2210,7 +2255,15 @@ function initCartUI() {
     const btnCart = document.getElementById('btn-cart');
     if (btnCart) btnCart.addEventListener('click', openCartModal);
     const btnClear = document.getElementById('btn-clear-cart');
-    if (btnClear) btnClear.addEventListener('click', () => { if (cart.length && confirm('¿Vaciar carrito?')) clearCart(); });
+    if (btnClear) btnClear.addEventListener('click', () => {
+        if (!cart.length) return;
+        showConfirmModal(
+            '¿Vaciar carrito?',
+            '¿Estás seguro de que quieres vaciar el carrito? Esta acción no se puede deshacer.',
+            'Vaciar',
+            () => clearCart()
+        );
+    });
     const btnCopy = document.getElementById('btn-copy-order');
     if (btnCopy) btnCopy.addEventListener('click', async () => {
         const text = buildOrderMessage();
