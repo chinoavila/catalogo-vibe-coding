@@ -1301,6 +1301,23 @@ footer.fixed-bottom {
     max-width: 600px;
 }
 
+#modalProduct .modal-body {
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
+}
+
+#modalProduct .modal-dialog {
+    max-height: calc(100vh - 60px);
+    display: flex;
+    flex-direction: column;
+}
+
+#modalProduct .modal-content {
+    max-height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
 /* El modal de configuración ya tiene modal-lg de Bootstrap */
 #modalSiteConfig .modal-body {
     max-height: calc(100vh - 200px);
